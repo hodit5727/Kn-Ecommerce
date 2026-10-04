@@ -1,0 +1,33 @@
+{
+  "name": "kshop-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "K-Shop (Vibe Coders) Express backend — single privileged client for Supabase (Auth/Storage/Postgres). Phase 4: auth session + admin auth.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:auth": "node --test tests/auth.test.mjs",
+    "test:env": "node --test tests/env-fail.test.mjs",
+    "smoke": "node tests/live-smoke.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.22.0",
+    "@vladmandic/face-api": "^1.7.15",
+    "@vladmandic/human": "^3.3.6",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jpeg-js": "^0.4.4",
+    "nodemailer": "^10.0.10",
+    "pngjs": "^7.0.0"
+  }
+}

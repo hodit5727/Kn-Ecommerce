@@ -1,0 +1,40 @@
+# Logs & Surveillance
+logs
+*.log
+*.jsonl
+server/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables — secrets must never be committed
+.env
+.env.*
+!.env.example
+
+# SQL and Database dumps — ignored to prevent data/schema leakage
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+
+# Local test-database cluster (server/tests/pg-harness) — never commit
+.pgdata/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
