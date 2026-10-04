@@ -15,10 +15,12 @@ import {
   Trash2,
   Clock,
   X,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatINR } from '../../lib/currency';
+import { exportToCsv } from '../../lib/csvExport';
 
 const DEFAULT_PER_PAGE = 20;
 
@@ -157,6 +159,38 @@ export const AdminProductsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      showToast('Preparing product catalog export...');
+      const res = await adminService.getProducts({ page: 1, perPage: 1000, q: debouncedQuery });
+      const records = res.items.length > 0 ? res.items : products;
+      if (records.length === 0) {
+        showToast('No products available to export.', 'error');
+        return;
+      }
+      exportToCsv<Product>(
+        'kshop_products_catalog',
+        [
+          { header: 'Product Code / SKU', key: (p) => p.productCode || p.sku || p.id },
+          { header: 'Product Name', key: 'name' },
+          { header: 'Category', key: 'category' },
+          { header: 'Brand', key: (p) => p.brand || 'K-SHOP' },
+          { header: 'Price (INR)', key: 'price' },
+          { header: 'Stock Units', key: 'stock' },
+          { header: 'Verification Status', key: 'status' },
+          { header: 'Merchant / Store', key: (p) => p.sellerName || p.sellerId || 'N/A' },
+          { header: 'Rating', key: (p) => p.rating ?? 0 },
+          { header: 'Review Count', key: (p) => p.reviewCount ?? 0 },
+          { header: 'Created Date', key: (p) => p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A' },
+        ],
+        records
+      );
+      showToast(`Exported ${records.length} products to CSV!`);
+    } catch (e: any) {
+      showToast(e.message || 'Failed to export products CSV', 'error');
+    }
+  };
+
   const empty = !isLoading && !error && products.length === 0;
 
   return (
@@ -174,6 +208,16 @@ export const AdminProductsPage: React.FC = () => {
             Inspect physical pieces brought to IT Cabin, verify hallmarking, manage stock and approve public listings.
           </p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isLoading || products.length === 0}
+          leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+        >
+          Export Products CSV
+        </Button>
       </div>
 
       {/* Search Bar */}

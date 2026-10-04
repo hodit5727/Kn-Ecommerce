@@ -15,8 +15,10 @@ import {
   ShieldCheck,
   Building,
   FileSearch,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 type SellerTab = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
 
@@ -85,17 +87,69 @@ export const AdminSellersPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      showToast('Preparing seller registry export...');
+      const res = await adminService.getSellers({
+        page: 1,
+        perPage: 1000,
+        status: activeTab,
+      });
+      const records = res.items.length > 0 ? res.items : sellers;
+      if (records.length === 0) {
+        showToast('No seller records to export.', 'error');
+        return;
+      }
+      exportToCsv<AdminSellerRecord>(
+        `kshop_sellers_${activeTab.toLowerCase()}`,
+        [
+          { header: 'Seller ID', key: (s) => s.sellerId || s.customerId },
+          { header: 'Store Name', key: 'storeName' },
+          { header: 'Owner / Contact Person', key: 'ownerName' },
+          { header: 'Contact Email', key: 'email' },
+          { header: 'Contact Phone', key: (s) => s.phone || 'N/A' },
+          { header: 'Accreditation Status', key: 'status' },
+          { header: 'Total Catalog Products', key: 'productCount' },
+          { header: 'Total Orders Fulfilled', key: 'orderCount' },
+          { header: 'Gross Revenue (INR)', key: 'grossRevenue' },
+          { header: 'Settlement Standing', key: 'settlementStatus' },
+          { header: 'Application Date', key: (s) => s.appliedDate ? new Date(s.appliedDate).toLocaleDateString() : 'N/A' },
+          { header: 'Reviewed Date', key: (s) => s.reviewedDate ? new Date(s.reviewedDate).toLocaleDateString() : 'N/A' },
+        ],
+        records
+      );
+      showToast(`Exported ${records.length} seller records to CSV!`);
+    } catch (e: any) {
+      showToast(e.message || 'Failed to export seller CSV', 'error');
+    }
+  };
+
   const empty = !isLoading && !error && sellers.length === 0;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="border-b border-stone-200 pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
-          Atelier Accreditation Pipeline
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-          Seller Accreditation & Governance
-        </h1>
+      <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
+            Atelier Accreditation Pipeline
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            Seller Accreditation & Governance
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Campus merchant dossiers, business accreditation, revenue figures, and store approval gates.
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isLoading || sellers.length === 0}
+          leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+        >
+          Export Sellers CSV ({activeTab})
+        </Button>
       </div>
 
       {/* Pipeline Tabs (server-side status filter) */}

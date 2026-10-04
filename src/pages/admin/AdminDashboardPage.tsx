@@ -13,8 +13,11 @@ import {
   RotateCcw,
   Landmark,
   Megaphone,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from 'lucide-react';
+import { Button } from '../../components/common/Button';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminDashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
@@ -60,6 +63,28 @@ export const AdminDashboardPage: React.FC = () => {
     );
   }
 
+  const handleExportSummaryCsv = () => {
+    if (!metrics) return;
+    exportToCsv(
+      'kshop_platform_executive_summary',
+      [
+        { header: 'Platform Metric Indicator', key: 'metric' },
+        { header: 'Current Cumulative Value', key: 'value' },
+        { header: 'Notes / Scope', key: 'notes' },
+      ],
+      [
+        { metric: 'Total Gross Revenue (INR)', value: metrics.totalGrossRevenue, notes: 'Collected via COD delivery' },
+        { metric: 'Total Orders Placed', value: metrics.totalOrders, notes: 'All customer requisitions' },
+        { metric: 'Total Registered Customers', value: metrics.totalCustomers, notes: 'Campus patrons' },
+        { metric: 'Total Registered Sellers', value: metrics.totalSellers, notes: 'Merchant stores & ateliers' },
+        { metric: 'Total Catalog Products', value: metrics.totalProducts, notes: 'Published & pending items' },
+        { metric: 'Pending Refund Disputes', value: metrics.pendingRefundsCount, notes: 'Under arbitration' },
+        { metric: 'Pending Escrow Settlements', value: metrics.pendingSettlementsCount, notes: 'Day-8 maturation pipeline' },
+        { metric: 'Active Bulletins & Announcements', value: metrics.activeAnnouncementsCount, notes: 'Live broadcasts' },
+      ]
+    );
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -70,9 +95,20 @@ export const AdminDashboardPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
             Administrative Control Tower
           </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Executive oversight, commercial telemetry, dispute tribunals, and escrow settlement status.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportSummaryCsv}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Executive Summary CSV
+          </Button>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
             <CheckCircle2 className="w-4 h-4" /> Platform COD Protocol Nominal
           </span>

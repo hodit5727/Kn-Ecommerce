@@ -7,7 +7,8 @@ import { Button } from '../../components/common/Button';
 import { useToast } from '../../context/ToastContext';
 import { apiRequest } from '../../api/http';
 import { formatINR } from '../../lib/currency';
-import { Send, CheckCircle2, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
+import { Send, CheckCircle2, ShieldCheck, ArrowRight, RefreshCw, Download } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminSettlementsPage: React.FC = () => {
   const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
@@ -61,6 +62,32 @@ export const AdminSettlementsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = () => {
+    if (settlements.length === 0) {
+      showToast('No settlements to export.', 'error');
+      return;
+    }
+    exportToCsv<SettlementRecord>(
+      'kshop_escrow_settlements',
+      [
+        { header: 'Settlement Number', key: 'settlementNumber' },
+        { header: 'Seller ID', key: 'sellerId' },
+        { header: 'Merchant Contact', key: 'sellerName' },
+        { header: 'Gross Amount (INR)', key: 'grossAmount' },
+        { header: 'Platform Fee (INR)', key: 'platformFee' },
+        { header: 'Net Payout (INR)', key: 'netSettlementAmount' },
+        { header: 'Escrow Status', key: 'status' },
+        { header: 'Period Start', key: (s) => s.periodStart ? new Date(s.periodStart).toLocaleDateString() : 'N/A' },
+        { header: 'Period End', key: (s) => s.periodEnd ? new Date(s.periodEnd).toLocaleDateString() : 'N/A' },
+        { header: 'Wire Reference', key: (s) => s.bankReference || 'Pending' },
+        { header: 'Created Date', key: (s) => s.createdAt ? new Date(s.createdAt).toLocaleDateString() : 'N/A' },
+        { header: 'Processed Date', key: (s) => s.processedAt ? new Date(s.processedAt).toLocaleString() : 'Unprocessed' },
+      ],
+      settlements
+    );
+    showToast(`Exported ${settlements.length} settlement records to CSV!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -71,16 +98,30 @@ export const AdminSettlementsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
             Settlement Wire Authorizations
           </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Verify Day-8 escrow maturation, release bank wires to merchant balances, and audit platform commission fees.
+          </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadSettlements}
-          isLoading={isLoading}
-          leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-        >
-          Refresh Escrow
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || settlements.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Settlements CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadSettlements}
+            isLoading={isLoading}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Refresh Escrow
+          </Button>
+        </div>
       </div>
 
       {error ? (

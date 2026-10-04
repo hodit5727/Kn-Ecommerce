@@ -24,9 +24,11 @@ import {
   X,
   Package,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatINR } from '../../lib/currency';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -81,6 +83,34 @@ export const AdminOrdersPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const handleExportCsv = () => {
+    const records = filtered.length > 0 ? filtered : orders;
+    if (records.length === 0) {
+      showToast('No orders available to export.', 'error');
+      return;
+    }
+    exportToCsv<Order>(
+      `kshop_orders_${statusFilter.toLowerCase()}`,
+      [
+        { header: 'Order Number', key: (o) => `#${o.orderNumber || o.id}` },
+        { header: 'Order Status', key: 'orderStatus' },
+        { header: 'Customer Name', key: (o) => o.shippingAddress?.fullName || o.customerName || 'Customer' },
+        { header: 'Customer Email', key: (o) => o.customerEmail || 'N/A' },
+        { header: 'Customer Phone', key: (o) => o.shippingAddress?.phone || o.customerPhone || 'N/A' },
+        { header: 'Store / Seller', key: (o) => o.sellerStoreName || o.sellerName || 'N/A' },
+        { header: 'Subtotal (INR)', key: 'subtotal' },
+        { header: 'Delivery Fee (INR)', key: 'deliveryFee' },
+        { header: 'Total Value (INR)', key: 'totalAmount' },
+        { header: 'Items Count', key: (o) => o.items?.length ?? 1 },
+        { header: 'Placed At', key: (o) => o.createdAt ? new Date(o.createdAt).toLocaleString() : 'N/A' },
+        { header: 'Cancellation Reason', key: (o) => o.cancellationReason || 'N/A' },
+        { header: 'Delivery Address', key: (o) => o.shippingAddress ? `${o.shippingAddress.streetAddress}, ${o.shippingAddress.city}, ${o.shippingAddress.postalCode}` : 'N/A' },
+      ],
+      records
+    );
+    showToast(`Exported ${records.length} orders to CSV!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -91,8 +121,20 @@ export const AdminOrdersPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
             Platform Order Governance
           </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Track customer requisitions, delivery routes, invoice manifests, and payment states.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || orders.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Orders CSV
+          </Button>
           <span className="text-xs font-semibold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-xl border border-stone-200">
             Total Orders: <strong>{orders.length}</strong>
           </span>

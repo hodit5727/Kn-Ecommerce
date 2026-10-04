@@ -5,7 +5,8 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../context/ToastContext';
-import { ScanFace, FileSearch, CheckCircle2, XCircle, RotateCcw, ExternalLink, ShieldCheck } from 'lucide-react';
+import { ScanFace, FileSearch, CheckCircle2, XCircle, RotateCcw, ExternalLink, ShieldCheck, Download } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 /**
  * Admin reviewer surface for the seller identity + face verification (KYC)
@@ -119,11 +120,38 @@ export const AdminSellerVerificationsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = () => {
+    if (rows.length === 0) {
+      showToast('No verification records to export.', 'error');
+      return;
+    }
+    exportToCsv<AdminVerificationRow>(
+      'kshop_seller_verifications',
+      [
+        { header: 'Verification ID', key: 'id' },
+        { header: 'User ID', key: 'userId' },
+        { header: 'Applicant Email', key: (r) => r.email || 'N/A' },
+        { header: 'Store Name', key: (r) => r.storeName || 'N/A' },
+        { header: 'Verification State', key: 'state' },
+        { header: 'Attempt Cycle', key: 'cycle' },
+        { header: 'Document Status', key: (r) => r.documentStatus || 'N/A' },
+        { header: 'Liveness Status', key: (r) => r.livenessStatus || 'N/A' },
+        { header: 'Face Match Status', key: (r) => r.matchStatus || 'N/A' },
+        { header: 'Attempt Count', key: (r) => r.attemptCount ?? 0 },
+        { header: 'Submitted At', key: (r) => r.submittedAt ? new Date(r.submittedAt).toLocaleString() : 'N/A' },
+        { header: 'Reviewed At', key: (r) => r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : 'Pending' },
+        { header: 'Rejection Reason', key: (r) => r.rejectionReason || 'None' },
+      ],
+      rows
+    );
+    showToast(`Exported ${rows.length} KYC verification records to CSV!`);
+  };
+
   const empty = !isLoading && !error && rows.length === 0;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="border-b border-stone-200 pb-6 flex items-start justify-between gap-4">
+      <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
             Seller Identity & Face Verification
@@ -135,8 +163,19 @@ export const AdminSellerVerificationsPage: React.FC = () => {
             Reviewed by a server-verified admin. Verdicts are backend + database enforced.
           </p>
         </div>
-        <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-burgundy-50 text-burgundy items-center justify-center shrink-0">
-          <ScanFace className="w-6 h-6" />
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || rows.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Verifications CSV
+          </Button>
+          <div className="hidden sm:flex w-10 h-10 rounded-2xl bg-burgundy-50 text-burgundy items-center justify-center shrink-0">
+            <ScanFace className="w-5 h-5" />
+          </div>
         </div>
       </div>
 

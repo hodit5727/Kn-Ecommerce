@@ -23,6 +23,7 @@ import {
   Download,
   Loader2
 } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 const SUPABASE_OPERATORS_SQL = `-- ====================================================================
 -- PLATFORM OPERATORS & STAFF MANAGEMENT SCHEMA (Supabase PostgreSQL)
@@ -316,6 +317,27 @@ export const AdminOperatorsPage: React.FC = () => {
     showToast('Supabase SQL copied to clipboard!');
   };
 
+  const handleExportCsv = () => {
+    if (operators.length === 0) {
+      showToast('No operators to export.', 'error');
+      return;
+    }
+    exportToCsv<AdminOperator>(
+      'kshop_operators',
+      [
+        { header: 'Operator ID', key: 'id' },
+        { header: 'Full Name', key: 'fullName' },
+        { header: 'Email Address', key: 'email' },
+        { header: 'Assigned Role', key: 'role' },
+        { header: 'Phone Number', key: (o) => o.phone || 'N/A' },
+        { header: 'Operational Status', key: 'status' },
+        { header: 'Registered At', key: (o) => o.createdAt ? new Date(o.createdAt).toLocaleDateString() : 'N/A' },
+      ],
+      operators
+    );
+    showToast(`Exported ${operators.length} operators to CSV!`);
+  };
+
   const getRoleBadge = (opRole: OperatorRole) => {
     switch (opRole) {
       case 'SUPER_ADMIN':
@@ -363,6 +385,16 @@ export const AdminOperatorsPage: React.FC = () => {
             leftIcon={<Database className="w-4 h-4" />}
           >
             Supabase SQL
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || operators.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export CSV
           </Button>
 
           <Button

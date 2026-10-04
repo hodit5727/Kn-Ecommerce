@@ -16,8 +16,10 @@ import {
   Zap,
   Lock,
   Radio,
-  FileCode
+  FileCode,
+  Download
 } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminMonitoringPage: React.FC = () => {
   const [logs, setLogs] = useState<SystemAuditLog[]>([]);
@@ -57,6 +59,30 @@ export const AdminMonitoringPage: React.FC = () => {
     return matchesSearch && matchesAction;
   });
 
+  const handleExportCsv = () => {
+    const records = filteredLogs.length > 0 ? filteredLogs : logs;
+    if (records.length === 0) {
+      showToast('No audit logs to export.', 'error');
+      return;
+    }
+    exportToCsv<SystemAuditLog>(
+      'kshop_security_audit_logs',
+      [
+        { header: 'Event ID', key: 'id' },
+        { header: 'Security Action', key: 'action' },
+        { header: 'Actor Role', key: (l) => l.actor_role || 'ANONYMOUS' },
+        { header: 'Actor User ID', key: (l) => l.actor_id || 'System' },
+        { header: 'Resource Type', key: (l) => l.resource_type || 'N/A' },
+        { header: 'Resource ID', key: (l) => l.resource_id || 'N/A' },
+        { header: 'Client IP Address', key: (l) => l.ip_address || '127.0.0.1' },
+        { header: 'Timestamp', key: (l) => l.created_at ? new Date(l.created_at).toLocaleString() : 'N/A' },
+        { header: 'Metadata Details', key: (l) => l.metadata ? JSON.stringify(l.metadata) : '{}' },
+      ],
+      records
+    );
+    showToast(`Exported ${records.length} audit log entries to CSV!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -73,15 +99,27 @@ export const AdminMonitoringPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchLogs}
-          isLoading={isLoading}
-          leftIcon={<RefreshCw className="w-4 h-4" />}
-        >
-          Refresh Event Stream
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isLoading || logs.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Logs CSV
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchLogs}
+            isLoading={isLoading}
+            leftIcon={<RefreshCw className="w-4 h-4" />}
+          >
+            Refresh Event Stream
+          </Button>
+        </div>
       </div>
 
       {/* Sentry & Wazuh Integration Cards */}

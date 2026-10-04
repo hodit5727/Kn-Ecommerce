@@ -5,8 +5,10 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { Badge } from '../../components/common/Badge';
 import { Pagination } from '../../components/common/Pagination';
 import { useToast } from '../../context/ToastContext';
-import { Users, UserX, UserCheck, Search } from 'lucide-react';
+import { Users, UserX, UserCheck, Search, Download, FileSpreadsheet } from 'lucide-react';
 import { formatINR } from '../../lib/currency';
+import { Button } from '../../components/common/Button';
+import { exportToCsv } from '../../lib/csvExport';
 
 const DEFAULT_PER_PAGE = 20;
 
@@ -60,17 +62,63 @@ export const AdminCustomersPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      showToast('Preparing customer directory export...');
+      const res = await adminService.getCustomers({ page: 1, perPage: 1000, q: debouncedQuery });
+      const records = res.items.length > 0 ? res.items : customers;
+      if (records.length === 0) {
+        showToast('No customer records to export.', 'error');
+        return;
+      }
+      exportToCsv<AdminCustomerRecord>(
+        'kshop_customers',
+        [
+          { header: 'Customer ID', key: 'customerId' },
+          { header: 'Full Name', key: 'fullName' },
+          { header: 'Email Address', key: 'email' },
+          { header: 'Phone Number', key: (c) => c.phone || 'N/A' },
+          { header: 'Account Status', key: 'status' },
+          { header: 'Total Orders', key: 'orderCount' },
+          { header: 'Total Spent (INR)', key: 'totalSpent' },
+          { header: 'Seller Status', key: 'sellerStatus' },
+          { header: 'Seller ID', key: (c) => c.sellerId || 'N/A' },
+          { header: 'Joined Date', key: (c) => c.joinedDate ? new Date(c.joinedDate).toLocaleDateString() : 'N/A' },
+        ],
+        records
+      );
+      showToast(`Exported ${records.length} customer records to CSV!`);
+    } catch (e: any) {
+      showToast(e.message || 'Failed to export customer CSV', 'error');
+    }
+  };
+
   const empty = !isLoading && !error && customers.length === 0;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="border-b border-stone-200 pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
-          Patron Registry
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-          Client & Patron Directory
-        </h1>
+      <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
+            Patron Registry
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            Client & Patron Directory
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Comprehensive customer accounts, phone contacts, spend metrics, and seller flags.
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isLoading || customers.length === 0}
+          leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+        >
+          Export Customers CSV
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-soft flex items-center gap-3">

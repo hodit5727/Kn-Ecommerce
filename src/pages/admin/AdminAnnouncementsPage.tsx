@@ -7,7 +7,8 @@ import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
-import { Megaphone, Trash2, Calendar, Users } from 'lucide-react';
+import { Megaphone, Trash2, Calendar, Users, Download } from 'lucide-react';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminAnnouncementsPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -78,15 +79,52 @@ export const AdminAnnouncementsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = () => {
+    if (announcements.length === 0) {
+      showToast('No announcements to export.', 'error');
+      return;
+    }
+    exportToCsv<Announcement>(
+      'kshop_announcements',
+      [
+        { header: 'Announcement ID', key: 'id' },
+        { header: 'Bulletin Title', key: 'title' },
+        { header: 'Message Body', key: 'message' },
+        { header: 'Target Audience', key: 'audience' },
+        { header: 'Priority Level', key: 'priority' },
+        { header: 'Broadcast Start Date', key: (a) => (a as any).startDate || (a as any).published_at || 'Immediate' },
+        { header: 'Expiry Date', key: (a) => (a as any).endDate || (a as any).expires_at || 'Permanent' },
+        { header: 'Created Date', key: (a) => (a as any).createdAt ? new Date((a as any).createdAt).toLocaleDateString() : 'N/A' },
+      ],
+      announcements
+    );
+    showToast(`Exported ${announcements.length} announcements to CSV!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="border-b border-stone-200 pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
-          Directives & Bulletins
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-          Announcement Management Engine
-        </h1>
+      <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
+            Directives & Bulletins
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            Announcement Management Engine
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Broadcast platform updates, campus alerts, maintenance notices, and seller policy changes.
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isLoading || announcements.length === 0}
+          leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+        >
+          Export Bulletins CSV
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

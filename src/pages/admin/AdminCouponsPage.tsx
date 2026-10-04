@@ -18,8 +18,10 @@ import {
   X,
   Clock,
   Sparkles,
+  Download
 } from 'lucide-react';
 import { formatINR } from '../../lib/currency';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminCouponsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -123,7 +125,32 @@ export const AdminCouponsPage: React.FC = () => {
     showToast(`Copied ${text} to clipboard!`, 'info');
   };
 
-  const activeCount = coupons.filter((c) => c.is_active).length;
+  const handleExportCsv = () => {
+    if (coupons.length === 0) {
+      showToast('No coupons to export.', 'error');
+      return;
+    }
+    exportToCsv<AdminCoupon>(
+      'kshop_coupons',
+      [
+        { header: 'Coupon Code', key: 'code' },
+        { header: 'Description', key: (c) => c.description || 'None' },
+        { header: 'Discount Kind', key: (c) => (c as any).coupon_kind || (c as any).couponKind || 'PERCENT' },
+        { header: 'Discount Value', key: (c) => (c as any).coupon_kind === 'PERCENT' || (c as any).couponKind === 'PERCENT' ? `${(c as any).discount_value ?? (c as any).discountValue}%` : `₹${(c as any).discount_value ?? (c as any).discountValue}` },
+        { header: 'Max Discount (INR)', key: (c) => (c as any).max_discount ?? (c as any).maxDiscount ?? 'Unlimited' },
+        { header: 'Min Order (INR)', key: (c) => (c as any).min_order_amount ?? (c as any).minOrderAmount ?? 0 },
+        { header: 'Times Redeemed', key: (c) => (c as any).usage_count ?? (c as any).usageCount ?? 0 },
+        { header: 'Usage Limit', key: (c) => (c as any).usage_limit ?? (c as any).usageLimit ?? 'Unlimited' },
+        { header: 'Status', key: (c) => ((c as any).is_active ?? (c as any).isActive ? 'ACTIVE' : 'INACTIVE') },
+        { header: 'Expires At', key: (c) => (c as any).expires_at ?? (c as any).expiresAt ? new Date((c as any).expires_at ?? (c as any).expiresAt).toLocaleString() : 'No expiry' },
+        { header: 'Created At', key: (c) => (c as any).created_at ?? (c as any).createdAt ? new Date((c as any).created_at ?? (c as any).createdAt).toLocaleDateString() : 'N/A' },
+      ],
+      coupons
+    );
+    showToast(`Exported ${coupons.length} coupons to CSV!`);
+  };
+
+  const activeCount = coupons.filter((c) => (c as any).is_active ?? (c as any).isActive).length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
@@ -141,15 +168,28 @@ export const AdminCouponsPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          onClick={() => setIsModalOpen(true)}
-          leftIcon={<Plus className="w-4 h-4" />}
-        >
-          Create Coupon
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={handleExportCsv}
+            disabled={isLoading || coupons.length === 0}
+            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+          >
+            Export Coupons CSV
+          </Button>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={() => setIsModalOpen(true)}
+            leftIcon={<Plus className="w-4 h-4" />}
+          >
+            Create Coupon
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}

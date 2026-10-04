@@ -5,8 +5,9 @@ import { RefundStatusBadge } from '../../components/refunds/RefundStatusBadge';
 import { ErrorState } from '../../components/common/ErrorState';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../context/ToastContext';
-import { RotateCcw, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { RotateCcw, CheckCircle2, XCircle, AlertTriangle, Download } from 'lucide-react';
 import { formatINR } from '../../lib/currency';
+import { exportToCsv } from '../../lib/csvExport';
 
 export const AdminRefundsPage: React.FC = () => {
   const [refunds, setRefunds] = useState<RefundClaim[]>([]);
@@ -41,15 +42,57 @@ export const AdminRefundsPage: React.FC = () => {
     }
   };
 
+  const handleExportCsv = () => {
+    if (refunds.length === 0) {
+      showToast('No refund claims to export.', 'error');
+      return;
+    }
+    exportToCsv<RefundClaim>(
+      'kshop_refunds',
+      [
+        { header: 'Claim ID', key: 'id' },
+        { header: 'Order Code', key: (r) => r.orderNumber ? `ORD-${r.orderNumber}` : r.orderId },
+        { header: 'Customer Name', key: (r) => r.customerName || 'Customer' },
+        { header: 'Store / Seller', key: (r) => r.sellerName || 'Merchant' },
+        { header: 'Product Item', key: (r) => r.productName || 'Item' },
+        { header: 'Refund Amount (INR)', key: 'amount' },
+        { header: 'Return Code', key: (r) => r.returnCode || 'N/A' },
+        { header: 'Refund Code', key: (r) => r.refundCode || 'N/A' },
+        { header: 'Claim Reason', key: 'reason' },
+        { header: 'Claim Status', key: 'status' },
+        { header: 'Requested At', key: (r) => r.requestedAt ? new Date(r.requestedAt).toLocaleString() : 'N/A' },
+        { header: 'Resolved At', key: (r) => r.resolvedAt ? new Date(r.resolvedAt).toLocaleString() : 'Pending' },
+        { header: 'Admin Notes', key: (r) => r.adminNotes || 'None' },
+      ],
+      refunds
+    );
+    showToast(`Exported ${refunds.length} refund claims to CSV!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="border-b border-stone-200 pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
-          Dispute Tribunal
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-          Refund Arbitration & Return Claims
-        </h1>
+      <div className="border-b border-stone-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
+            Dispute Tribunal
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
+            Refund Arbitration & Return Claims
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Adjudicate campus return requests, evaluate customer claim reasons, and dispatch status updates.
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCsv}
+          disabled={isLoading || refunds.length === 0}
+          leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+        >
+          Export Refunds CSV
+        </Button>
       </div>
 
       {error ? (
