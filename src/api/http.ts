@@ -76,6 +76,16 @@ export async function apiRequest<T>(path: string, init: ApiRequestInit = {}): Pr
   }
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('kshop:session-expired', {
+          detail: {
+            url: path,
+            pathname: window.location.pathname,
+          },
+        })
+      );
+    }
     throw new ApiError(
       extractMessage(data) ?? `Request failed with status ${res.status}.`,
       res.status,

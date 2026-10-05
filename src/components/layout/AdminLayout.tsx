@@ -33,6 +33,12 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (!IS_UI_PREVIEW && !user) {
+      navigate('/admin/login', { replace: true, state: { from: location } });
+    }
+  }, [user, navigate, location]);
+
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },

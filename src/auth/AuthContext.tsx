@@ -88,6 +88,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     void refreshSession();
   }, [refreshSession]);
 
+  // Handle global session expiration (401 from any backend request)
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      setActiveRole('CUSTOMER');
+      setSessionError('Session expired. Please sign in again.');
+
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/admin') && currentPath !== '/admin/login') {
+          window.location.href = `/admin/login?from=${encodeURIComponent(currentPath)}`;
+        } else if (currentPath.startsWith('/delivery') && currentPath !== '/delivery/login') {
+          window.location.href = `/delivery/login?from=${encodeURIComponent(currentPath)}`;
+        } else if (currentPath.startsWith('/seller')) {
+          window.location.href = `/login?from=${encodeURIComponent(currentPath)}`;
+        }
+      }
+    };
+
+    window.addEventListener('kshop:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('kshop:session-expired', handleSessionExpired);
+    };
+  }, []);
+
+  // Periodic liveness check & tab re-focus check for active users
+  useEffect(() => {
+    if (IS_UI_PREVIEW || !user) return;
+
+    const checkSessionLiveness = async () => {
+      try {
+        const sessionUser = await authService.getSession();
+        if (!sessionUser) {
+          window.dispatchEvent(new CustomEvent('kshop:session-expired'));
+        }
+      } catch (err: any) {
+        if (err?.status === 401 || err?.message?.toLowerCase().includes('not signed in')) {
+          window.dispatchEvent(new CustomEvent('kshop:session-expired'));
+        }
+      }
+    };
+
+    const interval = setInterval(checkSessionLiveness, 60000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void checkSessionLiveness();
+      }
+    };
+
+    window.addEventListener('focus', onVisibility);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onVisibility);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user]);
+
   // Keep the active role consistent with the SERVER-provided role.
   useEffect(() => {
     if (!user) {
