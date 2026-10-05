@@ -3,9 +3,11 @@
   "name": "K-SHOP Campus Delivery",
   "short_name": "K-Delivery",
   "description": "Campus delivery operations, customer pass QR verification, and COD collection app",
+  "lang": "en",
   "start_url": "/delivery",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#FFF9F2",
   "theme_color": "#800020",
   "orientation": "portrait",
@@ -33,16 +35,16 @@
   ],
   "screenshots": [
     {
-      "src": "/hero-watch-8k.png",
+      "src": "/screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
       "label": "K-SHOP Delivery Operations"
     },
     {
-      "src": "/hero-water-scene.jpg",
+      "src": "/screenshot-narrow.png",
       "sizes": "750x1334",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "narrow",
       "label": "K-SHOP Delivery Mobile Portal"
     }
