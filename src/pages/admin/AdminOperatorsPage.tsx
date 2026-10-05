@@ -242,6 +242,10 @@ export const AdminOperatorsPage: React.FC = () => {
       const data = await adminService.getOperators();
       setOperators(data);
     } catch (err: any) {
+      if (err.status === 401 || err.message?.toLowerCase().includes('not signed in')) {
+        window.location.href = `/admin/login?from=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
       setError(err.message || 'Unable to load operator team records.');
     } finally {
       setIsLoading(false);

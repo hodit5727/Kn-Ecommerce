@@ -31,6 +31,10 @@ export const AdminDashboardPage: React.FC = () => {
       const data = await adminService.getMetrics();
       setMetrics(data);
     } catch (err: any) {
+      if (err.status === 401 || err.message?.toLowerCase().includes('not signed in')) {
+        window.location.href = `/admin/login?from=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
       setError(err.message || 'Unable to load administrative dashboard metrics.');
     } finally {
       setIsLoading(false);

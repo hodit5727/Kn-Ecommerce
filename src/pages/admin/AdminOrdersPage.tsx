@@ -51,6 +51,10 @@ export const AdminOrdersPage: React.FC = () => {
       const data = await orderService.getOrders();
       setOrders(data);
     } catch (err: any) {
+      if (err.status === 401 || err.message?.toLowerCase().includes('not signed in')) {
+        window.location.href = `/admin/login?from=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
       if (!silent) setError(err.message || 'Unable to retrieve administrative orders.');
     } finally {
       setIsLoading(false);
