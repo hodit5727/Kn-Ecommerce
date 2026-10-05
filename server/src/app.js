@@ -6,7 +6,27 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { corsMiddleware, originCheck, globalLimiter } from './middleware/security.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function findDistPath() {
+  const candidates = [
+    path.resolve(__dirname, '../../dist'),
+    path.resolve(process.cwd(), 'dist'),
+    path.resolve(process.cwd(), '../dist'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(path.join(p, 'index.html'))) {
+      return p;
+    }
+  }
+  return null;
+}
 import { createAuthRouter } from './routes/auth.js';
 import { createAdminRouter } from './routes/adminAuth.js';
 import { createAdminManagementRouter } from './routes/admin.js';
@@ -38,7 +58,10 @@ export function createApp({ env, supabase, verification = null }) {
     frameCache: createFrameCache(),
   };
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
   app.use(cookieParser(env.SESSION_SECRET));
   app.use(express.json({ limit: '10mb' }));
   app.use(corsMiddleware(env)); // allowlist + credentials
@@ -47,12 +70,6 @@ export function createApp({ env, supabase, verification = null }) {
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'kshop-backend', time: new Date().toISOString() });
-  });
-  // Hitting the process root in a browser is a common local-dev mix-up
-  // (the UI is on :5173; this API is on :3001). Name the health path instead
-  // of returning a bare "Not found." JSON with no next step.
-  app.get('/', (_req, res) => {
-    res.json({ ok: true, service: 'kshop-backend', health: '/health' });
   });
 
   app.use('/api/v1', createAuthRouter({ env, supabase }));
@@ -106,6 +123,23 @@ export function createApp({ env, supabase, verification = null }) {
     }
     res.json({ ok: true });
   });
+
+  const distDir = findDistPath();
+  if (distDir) {
+    app.use(express.static(distDir));
+    app.use((req, res, next) => {
+      if (req.method !== 'GET') return next();
+      if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+        return next();
+      }
+      const indexHtml = path.join(distDir, 'index.html');
+      return res.sendFile(indexHtml);
+    });
+  } else {
+    app.get('/', (_req, res) => {
+      res.json({ ok: true, service: 'kshop-backend', health: '/health' });
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(createErrorHandler({ env }));
