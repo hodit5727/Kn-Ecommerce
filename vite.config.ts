@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       open: false,
+      allowedHosts: true,
       // Dev-only proxy: the frontend calls same-origin `/api/v1` (see
       // src/api/config.ts) and Vite forwards it to the Express backend.
       // Production serves this path from the real API host instead.
@@ -44,6 +45,9 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+    },
+    preview: {
+      allowedHosts: true,
     },
   };
 });
