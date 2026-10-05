@@ -9,6 +9,7 @@
   "background_color": "#FFF9F2",
   "theme_color": "#800020",
   "orientation": "portrait",
+  "prefer_related_applications": false,
   "categories": ["shopping", "business", "productivity"],
   "icons": [
     {
@@ -28,6 +29,22 @@
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/hero-watch-8k.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "K-SHOP Delivery Operations"
+    },
+    {
+      "src": "/hero-water-scene.jpg",
+      "sizes": "750x1334",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "K-SHOP Delivery Mobile Portal"
     }
   ]
 }
