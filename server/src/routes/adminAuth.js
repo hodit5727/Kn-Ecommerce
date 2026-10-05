@@ -92,6 +92,7 @@ export function createAdminRouter({ env, supabase }) {
     const isDeliveryStaff =
       row &&
       (row.role === 'ADMIN' ||
+        row.role === 'DELIVERY_PERSON' ||
         (Array.isArray(row.roles) &&
           (row.roles.includes('DELIVERY_PERSON') ||
             row.roles.includes('ADMIN') ||

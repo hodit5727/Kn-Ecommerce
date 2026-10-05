@@ -1,4 +1,4 @@
-export type UserRole = 'CUSTOMER' | 'SELLER' | 'ADMIN';
+export type UserRole = 'CUSTOMER' | 'SELLER' | 'ADMIN' | 'DELIVERY_PERSON' | 'SUPER_ADMIN';
 
 export type SellerStatus = 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 

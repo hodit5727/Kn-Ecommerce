@@ -24,8 +24,27 @@ export async function loadProfileRow(service, userId) {
     .maybeSingle();
   if (sellerError) throw sellerError;
 
+  let roles = Array.isArray(row.roles) ? [...row.roles] : (row.role ? [row.role] : []);
+
+  // Also check platform_operators table (if present)
+  try {
+    const { data: operatorRow } = await service
+      .from('platform_operators')
+      .select('role, status')
+      .or(`id.eq.${userId},email.eq.${row.email}`)
+      .maybeSingle();
+    if (operatorRow && operatorRow.status === 'ACTIVE' && operatorRow.role) {
+      if (!roles.includes(operatorRow.role)) {
+        roles.push(operatorRow.role);
+      }
+    }
+  } catch (e) {
+    // ignore table absence or query error
+  }
+
   return {
     ...row,
+    roles,
     seller_status: seller?.verification_status ?? null,
     seller_store_name: seller?.store_name ?? null,
   };

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Html5Qrcode } from 'html5-qrcode';
 import { deliveryService } from '../../services/deliveryService';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -19,14 +20,38 @@ import {
   ShieldCheck,
   AlertCircle,
   X,
-  PackageCheck
+  PackageCheck,
+  User,
+  Camera,
+  Keyboard,
+  ShoppingBag,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { ErrorState } from '../../components/common/ErrorState';
 import { OrderProductImage } from '../../components/order/OrderProductImage';
 
+// Brief audio beep on scan success
+const playScanSuccessSound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.18);
+  } catch (e) {
+    // AudioContext might be restricted until user gesture; ignore
+  }
+};
+
 export const DeliveryDashboardPage: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, isLoading: isLoadingAuth, logout } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -42,10 +67,34 @@ export const DeliveryDashboardPage: React.FC = () => {
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // QR Scanner / Input modal state
+  // QR Scanner modal state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'camera' | 'manual'>('camera');
   const [scannedInput, setScannedInput] = useState('');
   const [scannerError, setScannerError] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+
+  // Authentication & Role Protection
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (!user) {
+        navigate('/delivery/login', { replace: true });
+        return;
+      }
+      const hasDeliveryAccess =
+        user.role === 'ADMIN' ||
+        user.role === 'DELIVERY_PERSON' ||
+        user.roles?.includes('DELIVERY_PERSON') ||
+        user.roles?.includes('ADMIN') ||
+        user.roles?.includes('SUPER_ADMIN');
+
+      if (!hasDeliveryAccess) {
+        setError('Access restricted. Please sign in with an authorized Delivery Operator or Admin account.');
+      }
+    }
+  }, [user, isLoadingAuth, navigate]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -54,6 +103,10 @@ export const DeliveryDashboardPage: React.FC = () => {
       const data = await deliveryService.getDeliveryOrders();
       setOrders(data);
     } catch (err: any) {
+      if (err.status === 401 || err.message?.toLowerCase().includes('not signed in')) {
+        navigate('/delivery/login', { replace: true });
+        return;
+      }
       setError(err.message || 'Unable to retrieve campus delivery orders.');
     } finally {
       setIsLoading(false);
@@ -61,14 +114,16 @@ export const DeliveryDashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
 
   const handleMarkDelivered = async (orderId: string) => {
     setIsUpdating(true);
     try {
       await deliveryService.markAsDelivered(orderId);
-      showToast('Order confirmed as Delivered! Cash collected.');
+      showToast('Order confirmed as Delivered! Cash collected successfully.', 'success');
       setActiveOrder(null);
       await fetchOrders();
     } catch (err: any) {
@@ -78,40 +133,152 @@ export const DeliveryDashboardPage: React.FC = () => {
     }
   };
 
-  const handleProcessScan = () => {
+  // Process Scanned or Entered Code
+  const handleProcessScan = async (rawCode?: string) => {
     setScannerError(null);
-    const trimmed = scannedInput.trim();
-    if (!trimmed) {
-      setScannerError('Please enter or scan a valid QR code or Order ID.');
+    const codeToTest = (rawCode || scannedInput || '').trim();
+    if (!codeToTest) {
+      setScannerError('Please scan a QR code or enter an Order ID.');
       return;
     }
 
-    let targetCode = trimmed;
+    let targetCode = codeToTest;
     try {
       // Check if scanned input is a JSON payload
-      const parsed = JSON.parse(trimmed);
+      const parsed = JSON.parse(codeToTest);
       if (parsed.orderCode) targetCode = parsed.orderCode;
       else if (parsed.orderId) targetCode = parsed.orderId;
+      else if (parsed.token) targetCode = parsed.token;
     } catch (e) {
-      // plain string
+      // plain text string
     }
 
-    const matched = orders.find(
+    const cleanTarget = targetCode.toLowerCase().replace(/^#/, '');
+
+    // Search in current orders
+    let matched = orders.find(
       (o) =>
-        o.id.toLowerCase() === targetCode.toLowerCase() ||
-        (o.orderCode && o.orderCode.toLowerCase() === targetCode.toLowerCase()) ||
-        (o.orderNumber && o.orderNumber.toLowerCase() === targetCode.toLowerCase()) ||
-        targetCode.toLowerCase().includes(o.id.slice(0, 6).toLowerCase())
+        o.id.toLowerCase() === cleanTarget ||
+        (o.orderCode && o.orderCode.toLowerCase() === cleanTarget) ||
+        (o.orderNumber && o.orderNumber.toLowerCase() === cleanTarget) ||
+        cleanTarget.includes(o.id.slice(0, 6).toLowerCase()) ||
+        (o.customerBusinessId && o.customerBusinessId.toLowerCase() === cleanTarget)
     );
 
+    // If not found in current local state, fetch fresh orders from backend
+    if (!matched) {
+      try {
+        const fresh = await deliveryService.getDeliveryOrders();
+        setOrders(fresh);
+        matched = fresh.find(
+          (o) =>
+            o.id.toLowerCase() === cleanTarget ||
+            (o.orderCode && o.orderCode.toLowerCase() === cleanTarget) ||
+            (o.orderNumber && o.orderNumber.toLowerCase() === cleanTarget) ||
+            cleanTarget.includes(o.id.slice(0, 6).toLowerCase()) ||
+            (o.customerBusinessId && o.customerBusinessId.toLowerCase() === cleanTarget)
+        );
+      } catch (e) {
+        // ignore
+      }
+    }
+
     if (matched) {
+      playScanSuccessSound();
       setActiveOrder(matched);
       setIsScannerOpen(false);
       setScannedInput('');
-      showToast(`Order found: ${matched.orderCode || matched.orderNumber}`);
+      showToast(`Verified Order: ${matched.orderCode || matched.orderNumber}`, 'success');
     } else {
-      setScannerError(`No matching order found for "${targetCode}".`);
+      setScannerError(`No matching order found for "${codeToTest}". Please check the ID or refresh.`);
     }
+  };
+
+  // Camera QR Scanner Lifecycle
+  useEffect(() => {
+    let html5QrCode: Html5Qrcode | null = null;
+    let isMounted = true;
+
+    if (isScannerOpen && scannerMode === 'camera') {
+      const containerId = 'qr-camera-stream';
+
+      // Give DOM time to mount container
+      const timer = setTimeout(() => {
+        if (!isMounted) return;
+        const elem = document.getElementById(containerId);
+        if (!elem) return;
+
+        try {
+          html5QrCode = new Html5Qrcode(containerId);
+          html5QrCodeRef.current = html5QrCode;
+
+          html5QrCode
+            .start(
+              { facingMode: 'environment' },
+              {
+                fps: 10,
+                qrbox: { width: 220, height: 220 },
+                aspectRatio: 1.0,
+              },
+              (decodedText) => {
+                if (html5QrCode?.isScanning) {
+                  html5QrCode.stop().then(() => {
+                    setIsCameraActive(false);
+                  }).catch(() => {});
+                }
+                handleProcessScan(decodedText);
+              },
+              () => {
+                // scanning frame ignored
+              }
+            )
+            .then(() => {
+              if (isMounted) setIsCameraActive(true);
+            })
+            .catch((err) => {
+              console.warn('[QR Scanner] Camera start error:', err);
+              if (isMounted) {
+                setScannerError('Camera access denied or unavailable. You can type or paste the code below.');
+                setScannerMode('manual');
+                setIsCameraActive(false);
+              }
+            });
+        } catch (e: any) {
+          if (isMounted) {
+            setScannerError(e?.message || 'Camera initialization error. Switching to manual input.');
+            setScannerMode('manual');
+          }
+        }
+      }, 150);
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+        if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+          html5QrCodeRef.current.stop().catch(() => {});
+          html5QrCodeRef.current = null;
+        }
+        setIsCameraActive(false);
+      };
+    } else {
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(() => {});
+        html5QrCodeRef.current = null;
+      }
+      setIsCameraActive(false);
+    }
+  }, [isScannerOpen, scannerMode]);
+
+  // Clean stop when closing modal
+  const handleCloseScanner = () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      html5QrCodeRef.current.stop().catch(() => {});
+      html5QrCodeRef.current = null;
+    }
+    setIsCameraActive(false);
+    setIsScannerOpen(false);
+    setScannerError(null);
+    setScannedInput('');
   };
 
   // Filter orders
@@ -128,17 +295,27 @@ export const DeliveryDashboardPage: React.FC = () => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const code = (o.orderCode || o.orderNumber || '').toLowerCase();
-      const name = (o.shippingAddress?.fullName || '').toLowerCase();
-      const phone = (o.shippingAddress?.phone || '').toLowerCase();
+      const name = (o.shippingAddress?.fullName || o.customerName || '').toLowerCase();
+      const phone = (o.shippingAddress?.phone || o.customerPhone || '').toLowerCase();
       const dept = (o.shippingAddress?.streetAddress || '').toLowerCase();
-      return code.includes(q) || name.includes(q) || phone.includes(q) || dept.includes(q);
+      const custId = (o.customerBusinessId || '').toLowerCase();
+      const productName = (o.items?.[0]?.product?.name || '').toLowerCase();
+
+      return (
+        code.includes(q) ||
+        name.includes(q) ||
+        phone.includes(q) ||
+        dept.includes(q) ||
+        custId.includes(q) ||
+        productName.includes(q)
+      );
     }
 
     return true;
   });
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20">
+    <div className="min-h-screen bg-stone-100 pb-24 text-stone-900">
       {/* Mobile Top App Bar */}
       <header className="sticky top-0 z-40 bg-burgundy text-white px-4 py-3 shadow-md flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -149,24 +326,27 @@ export const DeliveryDashboardPage: React.FC = () => {
             <h1 className="font-serif font-bold text-sm tracking-wide leading-tight">
               K-SHOP Delivery App
             </h1>
-            <p className="text-[10px] text-cream-200 font-mono">
-              Staff: {user?.fullName || 'Campus Delivery Personnel'}
+            <p className="text-[10px] text-cream-200 font-mono truncate max-w-[180px]">
+              {user?.fullName || 'Campus Delivery Personnel'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setIsScannerOpen(true)}
-            className="p-2 rounded-xl bg-white/15 hover:bg-white/20 transition-all flex items-center gap-1 text-xs font-semibold"
-            title="Scan customer QR code"
+            onClick={() => {
+              setScannerMode('camera');
+              setIsScannerOpen(true);
+            }}
+            className="p-2 rounded-xl bg-gold text-stone-900 hover:bg-gold/90 transition-all flex items-center gap-1 text-xs font-bold shadow-xs"
+            title="Scan customer QR pass"
           >
-            <QrIcon className="w-4 h-4 text-cream-100" />
+            <QrIcon className="w-4 h-4 text-stone-900" />
             <span className="hidden sm:inline">Scan QR</span>
           </button>
           <button
             onClick={fetchOrders}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white"
             title="Refresh orders"
           >
             <RefreshCw className="w-4 h-4" />
@@ -176,7 +356,7 @@ export const DeliveryDashboardPage: React.FC = () => {
               await logout();
               navigate('/delivery/login');
             }}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />
@@ -185,15 +365,39 @@ export const DeliveryDashboardPage: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-lg mx-auto px-4 pt-4 space-y-4">
+      <main className="max-w-xl mx-auto px-4 pt-4 space-y-4">
+        {/* Quick QR Scanner Banner */}
+        <button
+          onClick={() => {
+            setScannerMode('camera');
+            setIsScannerOpen(true);
+          }}
+          className="w-full bg-gradient-to-r from-stone-900 via-stone-800 to-burgundy text-white p-4 rounded-3xl shadow-soft flex items-center justify-between hover:opacity-95 transition-all text-left border border-white/10"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gold/20 border border-gold/30 flex items-center justify-center text-gold shadow-xs">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <strong className="block text-sm font-serif font-bold text-white flex items-center gap-1.5">
+                Scan Customer Pass QR <QrIcon className="w-4 h-4 text-gold" />
+              </strong>
+              <span className="text-[11px] text-cream-200">
+                Point camera at customer's phone or slip to verify & collect cash
+              </span>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-gold shrink-0" />
+        </button>
+
         {/* Search Bar */}
         <div className="relative">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Order ID (KNOR-XXXX), name, phone..."
-            className="w-full bg-white border border-stone-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-stone-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
+            placeholder="Search Order ID (KNOR-XXXX), student name, KNCR ID..."
+            className="w-full bg-white border border-stone-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-stone-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-burgundy/20"
           />
           <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
           {searchQuery && (
@@ -213,6 +417,7 @@ export const DeliveryDashboardPage: React.FC = () => {
             { id: 'Engineering', label: 'Engineering' },
             { id: 'Polytechnic', label: 'Polytechnic' },
             { id: 'B.Ed', label: 'B.Ed' },
+            { id: 'Hostel', label: 'Hostel' },
           ].map((st) => (
             <button
               key={st.id}
@@ -220,7 +425,7 @@ export const DeliveryDashboardPage: React.FC = () => {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                 selectedStream === st.id
                   ? 'bg-burgundy text-white shadow-sm'
-                  : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-100'
+                  : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
               }`}
             >
               {st.label}
@@ -229,10 +434,10 @@ export const DeliveryDashboardPage: React.FC = () => {
         </div>
 
         {/* Active Tabs: Pending vs Delivered */}
-        <div className="grid grid-cols-2 bg-stone-200/70 p-1 rounded-2xl text-xs font-bold">
+        <div className="grid grid-cols-2 bg-stone-200/80 p-1 rounded-2xl text-xs font-bold">
           <button
             onClick={() => setActiveTab('PENDING')}
-            className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'PENDING'
                 ? 'bg-white text-burgundy shadow-sm'
                 : 'text-stone-600 hover:text-stone-900'
@@ -243,7 +448,7 @@ export const DeliveryDashboardPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('DELIVERED')}
-            className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'DELIVERED'
                 ? 'bg-white text-emerald-800 shadow-sm'
                 : 'text-stone-600 hover:text-stone-900'
@@ -254,102 +459,49 @@ export const DeliveryDashboardPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Scan Bar Banner */}
-        <button
-          onClick={() => setIsScannerOpen(true)}
-          className="w-full bg-gradient-to-r from-stone-900 to-stone-800 text-white p-3.5 rounded-2xl shadow-soft flex items-center justify-between hover:opacity-95 transition-all text-left"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-cream-200">
-              <QrIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <strong className="block text-xs font-serif font-bold text-white">
-                Scan Customer QR Code
-              </strong>
-              <span className="text-[10px] text-cream-200">
-                Instantly verify customer pass & collect cash
-              </span>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-cream-300" />
-        </button>
-
         {/* Orders List */}
         {error ? (
-          <ErrorState title="Error Loading Orders" message={error} onRetry={fetchOrders} />
+          <div className="bg-white rounded-3xl p-6 border border-rose-200 shadow-sm space-y-3 text-center">
+            <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+            <h3 className="font-bold text-stone-900 text-sm">Delivery Portal Notice</h3>
+            <p className="text-xs text-stone-600">{error}</p>
+            <div className="flex gap-2 justify-center pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/delivery/login')}
+              >
+                Sign In As Operator
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="bg-burgundy text-white"
+                onClick={fetchOrders}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
         ) : isLoading ? (
-          <div className="py-16 text-center text-xs text-stone-500">
+          <div className="py-16 text-center text-xs text-stone-500 bg-white rounded-3xl border border-stone-200 p-8">
             <div className="w-7 h-7 rounded-full border-2 border-burgundy border-t-transparent animate-spin mx-auto mb-2" />
             Loading assigned campus deliveries...
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="py-16 text-center text-xs text-stone-400 bg-white rounded-3xl border border-cream-200 p-8">
-            <PackageCheck className="w-10 h-10 text-stone-300 mx-auto mb-2" />
+          <div className="py-16 text-center text-xs text-stone-400 bg-white rounded-3xl border border-stone-200 p-8 shadow-xs">
+            <PackageCheck className="w-12 h-12 text-stone-300 mx-auto mb-3" />
             <strong className="block text-stone-700 text-sm mb-1">No Orders Found</strong>
             <p className="text-stone-400">
               {activeTab === 'PENDING'
-                ? 'No pending deliveries in this category.'
-                : 'No delivered orders in this category yet.'}
+                ? 'No pending orders waiting for delivery right now.'
+                : 'No delivered orders recorded in this filter.'}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Highlight Next Delivery in Queue for Pending Tab */}
-            {activeTab === 'PENDING' && filteredOrders.length > 0 && (
-              <div className="bg-gradient-to-br from-burgundy to-burgundy-900 text-white rounded-3xl p-5 shadow-lg border border-burgundy/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-gold text-stone-900 px-2.5 py-0.5 rounded-full font-sans shadow-xs">
-                    NEXT IN QUEUE • QUEUE #1
-                  </span>
-                  <span className="font-mono text-xs font-bold text-cream-200">
-                    {filteredOrders[0].orderCode || filteredOrders[0].orderNumber}
-                  </span>
-                </div>
-
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-serif font-bold text-base text-white">
-                      {filteredOrders[0].shippingAddress.fullName}
-                    </h3>
-                    <p className="text-xs text-cream-200 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3.5 h-3.5 text-gold flex-shrink-0" />
-                      <span>{filteredOrders[0].shippingAddress.streetAddress}</span>
-                    </p>
-                    {filteredOrders[0].shippingAddress.apartmentSuite && (
-                      <p className="text-[11px] text-cream-300 pl-4">
-                        {filteredOrders[0].shippingAddress.apartmentSuite}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase text-cream-300 block">Collect Cash</span>
-                    <strong className="text-xl font-serif font-bold text-gold">
-                      {formatINR(filteredOrders[0].totalAmount)}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <a
-                    href={`tel:${filteredOrders[0].shippingAddress.phone}`}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-cream-100 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <Phone className="w-3.5 h-3.5" /> Call Customer
-                  </a>
-                  <button
-                    onClick={() => setActiveOrder(filteredOrders[0])}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-gold hover:bg-gold/90 text-stone-900 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
-                  >
-                    <QrIcon className="w-4 h-4" /> Scan & Handover
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Delivery Queue List */}
-            <div className="space-y-3">
+            {/* Delivery Queue List with full details */}
+            <div className="space-y-3.5">
               {filteredOrders.map((order, index) => {
                 const code =
                   order.orderCode ||
@@ -358,26 +510,30 @@ export const DeliveryDashboardPage: React.FC = () => {
                     : `KNOR-${order.id.slice(0, 4).toUpperCase()}`);
                 const isDelivered = order.orderStatus === 'COD_DELIVERED';
                 const queueNumber = index + 1;
+                const customerPhone = order.shippingAddress?.phone || order.customerPhone;
+                const customerName = order.shippingAddress?.fullName || order.customerName || 'Campus Customer';
+                const customerBusinessId = order.customerBusinessId;
+                const firstItem = order.items?.[0];
 
                 return (
                   <div
                     key={order.id}
-                    onClick={() => setActiveOrder(order)}
-                    className="bg-white rounded-2xl p-4 border border-cream-200 shadow-sm hover:border-burgundy/40 transition-all cursor-pointer space-y-2.5"
+                    className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-sm hover:border-burgundy/40 transition-all space-y-3.5"
                   >
-                    <div className="flex items-center justify-between pb-2 border-b border-cream-100">
+                    {/* Header Row: Queue #, Order Code, Status */}
+                    <div className="flex items-center justify-between pb-2.5 border-b border-stone-100">
                       <div className="flex items-center gap-2">
                         {!isDelivered && (
-                          <span className="text-[10px] font-bold bg-cream-100 text-stone-700 px-2 py-0.5 rounded font-mono">
+                          <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-sans">
                             Queue #{queueNumber}
                           </span>
                         )}
-                        <span className="font-mono text-xs font-bold text-burgundy bg-burgundy/5 px-2 py-0.5 rounded border border-burgundy/10">
+                        <span className="font-mono text-xs font-bold text-burgundy bg-burgundy/5 px-2.5 py-0.5 rounded-md border border-burgundy/10">
                           {code}
                         </span>
                       </div>
                       <span
-                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                        className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
                           isDelivered
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
@@ -387,43 +543,134 @@ export const DeliveryDashboardPage: React.FC = () => {
                       </span>
                     </div>
 
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <strong className="text-xs font-bold text-stone-900 block">
-                        {order.shippingAddress.fullName}
-                      </strong>
-                      <p className="text-[11px] text-stone-600 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3.5 h-3.5 text-burgundy flex-shrink-0" />
-                        <span className="truncate max-w-[220px]">
-                          {order.shippingAddress.streetAddress}
-                        </span>
-                      </p>
-                      {order.shippingAddress.apartmentSuite && (
-                        <p className="text-[10px] text-stone-500 pl-4">
-                          {order.shippingAddress.apartmentSuite}
+                    {/* Customer Info Card: Name, KNCR ID, Phone */}
+                    <div className="bg-stone-50 rounded-2xl p-3 border border-stone-200/80 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <strong className="text-xs sm:text-sm font-bold text-stone-900">
+                              {customerName}
+                            </strong>
+                            {customerBusinessId && (
+                              <span className="font-mono text-[9px] font-bold text-burgundy bg-burgundy/5 px-1.5 py-0.5 rounded border border-burgundy/10">
+                                {customerBusinessId}
+                              </span>
+                            )}
+                          </div>
+                          {order.customerEmail && (
+                            <span className="text-[10px] text-stone-500 block truncate max-w-[200px]">
+                              {order.customerEmail}
+                            </span>
+                          )}
+                        </div>
+
+                        {customerPhone && (
+                          <a
+                            href={`tel:${customerPhone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-stone-200 text-stone-800 hover:border-burgundy hover:text-burgundy text-[11px] font-bold shadow-2xs transition-colors shrink-0"
+                            title="Call customer directly"
+                          >
+                            <Phone className="w-3 h-3 text-emerald-600" />
+                            <span>Call</span>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Location Details (Department, Hostel, Room) */}
+                      <div className="text-[11px] text-stone-700 space-y-0.5 pt-1 border-t border-stone-200/60">
+                        <p className="flex items-start gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-burgundy shrink-0 mt-0.5" />
+                          <span className="font-medium">
+                            {order.shippingAddress?.streetAddress || 'Campus Delivery Point'}
+                          </span>
                         </p>
-                      )}
+                        {order.shippingAddress?.apartmentSuite && (
+                          <p className="text-[10px] text-stone-600 pl-5">
+                            <strong>Cabin / Room:</strong> {order.shippingAddress.apartmentSuite}
+                          </p>
+                        )}
+                        {(order.shippingAddress?.city || order.shippingAddress?.postalCode) && (
+                          <p className="text-[10px] text-stone-400 pl-5">
+                            {[order.shippingAddress?.city, order.shippingAddress?.postalCode].filter(Boolean).join(' - ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-[10px] text-stone-400 block uppercase">COD Due</span>
-                      <strong className="text-base font-serif font-bold text-stone-900">
-                        {formatINR(order.totalAmount)}
-                      </strong>
+                    {/* Product Details & Images Preview */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
+                        Package Products ({order.items.length})
+                      </span>
+                      <div className="space-y-2">
+                        {order.items.map((it) => (
+                          <div
+                            key={it.id}
+                            className="flex items-center justify-between text-xs gap-3 p-2 rounded-xl bg-stone-50 border border-stone-100"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <OrderProductImage
+                                src={it.product?.images?.[0]}
+                                alt={it.product?.name || 'Product'}
+                                name={it.product?.name || 'Product'}
+                                className="w-12 h-12 rounded-xl object-cover bg-white border border-stone-200 shrink-0 shadow-2xs"
+                              />
+                              <div className="truncate">
+                                <p className="font-bold text-stone-900 truncate text-xs">
+                                  {it.product?.name}
+                                </p>
+                                <p className="text-[10px] text-stone-500">
+                                  Qty: <strong>{it.quantity}</strong> × {formatINR(it.product?.price || 0)}
+                                </p>
+                                {it.selectedSize && (
+                                  <span className="text-[9px] text-stone-400 mr-2">
+                                    Size: {it.selectedSize}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-mono text-stone-900 font-bold shrink-0 text-xs">
+                              {formatINR((it.product?.price || 0) * it.quantity)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Footer: COD Due & Scan / Handover Button */}
+                    <div className="flex items-center justify-between pt-2 border-t border-stone-100 gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
+                          COD Cash Due
+                        </span>
+                        <strong className="text-base font-serif font-bold text-stone-900">
+                          {formatINR(order.totalAmount)}
+                        </strong>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isDelivered ? (
+                          <button
+                            onClick={() => setActiveOrder(order)}
+                            className="px-3.5 py-2 rounded-xl bg-stone-100 text-stone-700 hover:bg-stone-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                          >
+                            View Manifest
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setActiveOrder(order)}
+                            className="px-4 py-2.5 rounded-xl bg-gold hover:bg-gold/90 text-stone-900 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                          >
+                            <QrIcon className="w-3.5 h-3.5" />
+                            <span>Verify & Handover</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-cream-100 text-[11px]">
-                    <span className="text-stone-400">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                    </span>
-                    <span className="text-burgundy font-semibold flex items-center gap-0.5">
-                      View & Handover <ChevronRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           </div>
         )}
@@ -431,9 +678,9 @@ export const DeliveryDashboardPage: React.FC = () => {
 
       {/* Handover & Delivery Confirmation Modal */}
       {activeOrder && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 border border-cream-200 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-cream-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border border-stone-200 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div>
                 <span className="text-[10px] uppercase font-bold text-burgundy block">
                   Delivery Handover Manifest
@@ -447,31 +694,42 @@ export const DeliveryDashboardPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setActiveOrder(null)}
-                className="p-1 rounded-lg text-stone-400 hover:text-stone-700"
+                className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 bg-stone-100"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Customer Details Card */}
-            <div className="bg-cream-50 p-4 rounded-2xl border border-cream-200 space-y-2 text-xs">
+            <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-stone-500 text-[10px] uppercase font-bold">Customer</span>
-                <a
-                  href={`tel:${activeOrder.shippingAddress.phone}`}
-                  className="inline-flex items-center gap-1 text-burgundy font-bold hover:underline"
-                >
-                  <Phone className="w-3.5 h-3.5" /> Call Customer
-                </a>
+                <span className="text-stone-400 text-[10px] uppercase font-bold">Customer Dossier</span>
+                {(activeOrder.shippingAddress?.phone || activeOrder.customerPhone) && (
+                  <a
+                    href={`tel:${activeOrder.shippingAddress?.phone || activeOrder.customerPhone}`}
+                    className="inline-flex items-center gap-1 text-burgundy font-bold hover:underline"
+                  >
+                    <Phone className="w-3.5 h-3.5" /> Call Customer
+                  </a>
+                )}
               </div>
-              <p className="font-bold text-stone-900 text-sm">
-                {activeOrder.shippingAddress.fullName}
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-stone-900 text-sm">
+                  {activeOrder.shippingAddress?.fullName || activeOrder.customerName}
+                </p>
+                {activeOrder.customerBusinessId && (
+                  <span className="font-mono text-[9px] font-bold text-burgundy bg-burgundy/5 px-1.5 py-0.5 rounded border border-burgundy/10">
+                    {activeOrder.customerBusinessId}
+                  </span>
+                )}
+              </div>
+              <p className="text-stone-700 font-mono">
+                {activeOrder.shippingAddress?.phone || activeOrder.customerPhone}
               </p>
-              <p className="text-stone-700 font-mono">{activeOrder.shippingAddress.phone}</p>
               <p className="text-stone-600 pt-1">
-                <strong>Location:</strong> {activeOrder.shippingAddress.streetAddress}
+                <strong>Delivery Location:</strong> {activeOrder.shippingAddress?.streetAddress}
               </p>
-              {activeOrder.shippingAddress.apartmentSuite && (
+              {activeOrder.shippingAddress?.apartmentSuite && (
                 <p className="text-stone-600">
                   <strong>Room / Cabin:</strong> {activeOrder.shippingAddress.apartmentSuite}
                 </p>
@@ -480,26 +738,28 @@ export const DeliveryDashboardPage: React.FC = () => {
 
             {/* Order Items */}
             <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold text-stone-500 block">
+              <span className="text-[10px] uppercase font-bold text-stone-400 block tracking-wider">
                 Items in Package
               </span>
-              <div className="divide-y divide-cream-100 max-h-40 overflow-y-auto pr-1">
+              <div className="divide-y divide-stone-100 max-h-48 overflow-y-auto pr-1">
                 {activeOrder.items.map((it) => (
                   <div key={it.id} className="py-2.5 flex items-center justify-between text-xs gap-3">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <OrderProductImage
-                        src={it.product.images?.[0]}
-                        alt={it.product.name}
-                        name={it.product.name}
-                        className="w-10 h-10 rounded-lg object-cover bg-stone-100 border border-cream-200 shrink-0"
+                        src={it.product?.images?.[0]}
+                        alt={it.product?.name || 'Product'}
+                        name={it.product?.name || 'Product'}
+                        className="w-10 h-10 rounded-xl object-cover bg-stone-100 border border-stone-200 shrink-0"
                       />
                       <div className="truncate">
-                        <p className="font-semibold text-stone-900 truncate">{it.product.name}</p>
-                        <p className="text-[10px] text-stone-400">Qty: {it.quantity}</p>
+                        <p className="font-semibold text-stone-900 truncate">{it.product?.name}</p>
+                        <p className="text-[10px] text-stone-400">
+                          Qty: {it.quantity} × {formatINR(it.product?.price || 0)}
+                        </p>
                       </div>
                     </div>
                     <span className="font-mono text-stone-900 font-bold shrink-0">
-                      {formatINR(it.product.price * it.quantity)}
+                      {formatINR((it.product?.price || 0) * it.quantity)}
                     </span>
                   </div>
                 ))}
@@ -527,7 +787,7 @@ export const DeliveryDashboardPage: React.FC = () => {
             ) : (
               <Button
                 variant="primary"
-                className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold flex items-center justify-center gap-2 rounded-2xl shadow-md"
+                className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold flex items-center justify-center gap-2 rounded-2xl shadow-md text-sm"
                 isLoading={isUpdating}
                 onClick={() => handleMarkDelivered(activeOrder.id)}
               >
@@ -539,75 +799,121 @@ export const DeliveryDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* QR Scanner / Manual ID Input Modal */}
+      {/* Real Camera QR Scanner Modal */}
       {isScannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 border border-cream-200 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-cream-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 border border-stone-200 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-burgundy/10 flex items-center justify-center text-burgundy">
                   <QrIcon className="w-4 h-4" />
                 </div>
                 <h3 className="font-serif font-bold text-sm text-stone-900">
-                  Scan Customer QR
+                  Scan Customer QR Pass
                 </h3>
               </div>
               <button
-                onClick={() => {
-                  setIsScannerOpen(false);
-                  setScannerError(null);
-                  setScannedInput('');
-                }}
+                onClick={handleCloseScanner}
                 className="p-1 rounded-lg text-stone-400 hover:text-stone-700"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-stone-600">
-              Point your camera or paste the customer's QR handover token or Order ID (e.g.{' '}
-              <strong className="font-mono">KNOR-1042</strong>):
-            </p>
+            {/* Mode Switcher Tabs: Camera vs Manual Input */}
+            <div className="grid grid-cols-2 bg-stone-100 p-1 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setScannerMode('camera')}
+                className={`py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  scannerMode === 'camera'
+                    ? 'bg-white text-burgundy shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Camera Scan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScannerMode('manual')}
+                className={`py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  scannerMode === 'manual'
+                    ? 'bg-white text-burgundy shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                <Keyboard className="w-3.5 h-3.5" />
+                <span>Type Code</span>
+              </button>
+            </div>
 
             {scannerError && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-1.5">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{scannerError}</span>
               </div>
             )}
 
-            <div className="space-y-3">
-              <input
-                type="text"
-                autoFocus
-                value={scannedInput}
-                onChange={(e) => setScannedInput(e.target.value)}
-                placeholder="Scan or enter QR data / KNOR-XXXX"
-                className="w-full bg-white border border-stone-200 rounded-xl p-3 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy font-mono"
-              />
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setIsScannerOpen(false);
-                    setScannerError(null);
-                    setScannedInput('');
+            {/* Camera Viewfinder */}
+            {scannerMode === 'camera' ? (
+              <div className="space-y-3">
+                <div className="relative rounded-2xl overflow-hidden bg-black aspect-square flex items-center justify-center border-2 border-dashed border-stone-300">
+                  <div id="qr-camera-stream" className="w-full h-full" />
+                  {!isCameraActive && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-900/90 text-white text-xs p-4 text-center">
+                      <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-2" />
+                      Starting rear camera...
+                      <span className="text-[10px] text-stone-400 mt-1">Please allow camera permissions if prompted</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-center text-stone-500">
+                  Align customer pass QR within the frame to auto-detect
+                </p>
+              </div>
+            ) : (
+              /* Manual Input */
+              <div className="space-y-3">
+                <p className="text-xs text-stone-600">
+                  Enter Order ID (e.g. <strong className="font-mono">KNOR-1042</strong>) or paste QR text:
+                </p>
+                <input
+                  type="text"
+                  autoFocus
+                  value={scannedInput}
+                  onChange={(e) => setScannedInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleProcessScan();
+                    }
                   }}
-                >
-                  Cancel
-                </Button>
+                  placeholder="e.g. KNOR-1042 or customer ID"
+                  className="w-full bg-white border border-stone-200 rounded-xl p-3 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-burgundy font-mono"
+                />
+
                 <Button
                   type="button"
                   variant="primary"
-                  className="flex-1 bg-burgundy text-white hover:bg-burgundy/90"
-                  onClick={handleProcessScan}
+                  className="w-full bg-burgundy text-white hover:bg-burgundy/90 py-2.5 text-xs font-bold"
+                  onClick={() => handleProcessScan()}
                 >
-                  Verify Pass
+                  Verify Order Code
                 </Button>
               </div>
+            )}
+
+            <div className="pt-2 border-t border-stone-100 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleCloseScanner}
+              >
+                Close Scanner
+              </Button>
             </div>
           </div>
         </div>
