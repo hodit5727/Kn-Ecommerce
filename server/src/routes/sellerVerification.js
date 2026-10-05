@@ -152,8 +152,21 @@ export function createSellerVerificationRouter({ env, supabase, faceVerification
       if (verification?.verification_status === 'VERIFIED') {
         throw httpError(409, 'Identity verification has already been completed.');
       }
-      if (verification && ['MANUAL_REVIEW', 'REJECTED'].includes(verification.verification_status)) {
-        throw httpError(403, 'Your verification was not approved. Please contact support for a review.');
+      if (verification?.verification_status === 'MANUAL_REVIEW') {
+        return ok(res, {
+          verification: {
+            verificationId: verification.id,
+            cycle: verification.cycle,
+            state: 'MANUAL_REVIEW',
+          },
+          session: null,
+          provider: { mode: provider.mode, configured: providerConfigured },
+          reviewStatus: 'UNDER_REVIEW',
+          message: 'Your verification has been submitted and is under review.',
+        });
+      }
+      if (verification?.verification_status === 'REJECTED') {
+        throw httpError(403, verification.rejection_reason || 'Your verification was not approved. Please contact support for a review.');
       }
 
       if (!verification) {
@@ -255,11 +268,6 @@ export function createSellerVerificationRouter({ env, supabase, faceVerification
       // The college ID was already uploaded in the seller application step
       // (POST /seller/documents → seller-documents bucket). We re-use it here
       // so the frontend does not need a second "Upload ID" step.
-      //
-      // Security: we only read rows owned by this user (user_id = profile.id),
-      // and we only advance the verification if the current state is NOT_STARTED
-      // (the route already refuses states that are past this point). The backend
-      // re-validates the image during face matching — no client-supplied verdict.
       try {
         const freshVerif = await latestVerification(supabase, profile.id);
         const notStarted =
@@ -267,40 +275,28 @@ export function createSellerVerificationRouter({ env, supabase, faceVerification
           ['NOT_STARTED', 'DOCUMENT_UPLOADED'].includes(freshVerif.verification_status ?? '');
 
         if (notStarted && !freshVerif.document_storage_path) {
-          // Look for the most recent college ID in the seller application.
-          const { data: appDocs } = await supabase.service
-            .from('seller_applications')
+          // Look for existing ID document in seller_profiles
+          const { data: sDoc } = await supabase.service
+            .from('seller_profiles')
             .select('id_document_storage_path, id_document_mime')
-            .eq('user_id', profile.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .eq('profile_id', profile.id)
+            .maybeSingle();
 
-          const appDoc = appDocs?.[0];
-          if (appDoc?.id_document_storage_path) {
-            // Advance the verification record with the existing college ID
-            // bytes reference. The actual bytes are fetched during /complete.
+          if (sDoc?.id_document_storage_path) {
             await supabase.service
               .from('seller_verifications')
               .update({
-                document_storage_path: appDoc.id_document_storage_path,
+                document_storage_path: sDoc.id_document_storage_path,
                 document_type: 'COLLEGE_ID',
-                document_mime: appDoc.id_document_mime ?? 'image/jpeg',
-                document_status: 'PASSED',       // trusted: admin-verified at application
+                document_mime: sDoc.id_document_mime ?? 'image/jpeg',
+                document_status: 'PASSED',
                 verification_status: 'DOCUMENT_VERIFIED',
               })
               .eq('id', verification.id);
-            // eslint-disable-next-line no-console
-            console.log('[verification] auto-imported college ID from seller application', {
-              verificationId: verification.id,
-              storagePath: appDoc.id_document_storage_path,
-            });
           }
         }
       } catch (autoImportErr) {
         // Auto-import is best-effort: a failure here must not block the session.
-        // The frontend can always fall back to the manual document upload if needed.
-        // eslint-disable-next-line no-console
-        console.warn('[verification] college ID auto-import failed (non-fatal):', autoImportErr?.message ?? autoImportErr);
       }
 
       await writeAudit(supabase, {
@@ -675,12 +671,40 @@ export function createSellerVerificationRouter({ env, supabase, faceVerification
         await supabase.service.from('verification_sessions').update({ status: 'COMPLETED', completed_at: nowIso() }).eq('id', session.id);
         frames.discard(session.id);
 
-        // Fetch seller store name for the submission email
-        const { data: sProfile } = await supabase.service
+        // ── Ensure seller profile application exists and is linked ───────────
+        let { data: sProfile } = await supabase.service
           .from('seller_profiles')
-          .select('store_name')
+          .select('id, profile_id, store_name, verification_status')
           .eq('profile_id', profile.id)
           .maybeSingle();
+
+        if (!sProfile) {
+          const storeName = `${profile.full_name || 'Campus'}'s Store`;
+          const { data: createdSp } = await supabase.service
+            .from('seller_profiles')
+            .insert({
+              profile_id: profile.id,
+              store_name: storeName,
+              seller_name: profile.full_name || 'Seller',
+              mobile: profile.phone || '',
+              address: 'Campus Marketplace',
+              store_category: 'General',
+              business_type: 'INDIVIDUAL',
+              verification_status: 'PENDING',
+              submitted_at: nowIso(),
+            })
+            .select('id, profile_id, store_name, verification_status')
+            .maybeSingle();
+          sProfile = createdSp;
+        } else if (sProfile.verification_status !== 'APPROVED') {
+          await supabase.service
+            .from('seller_profiles')
+            .update({
+              verification_status: 'PENDING',
+              submitted_at: nowIso(),
+            })
+            .eq('profile_id', profile.id);
+        }
 
         // Send non-blocking confirmation email to seller and alert to admin
         sendSellerSubmissionEmail(env, {

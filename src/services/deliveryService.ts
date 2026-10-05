@@ -33,7 +33,7 @@ export const deliveryService = {
   async markAsDelivered(orderId: string): Promise<Order> {
     const res = await apiRequest<OrderResponse>(`/orders/${encodeURIComponent(orderId)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status: 'COD_DELIVERED' as CODOrderStatus }),
+      body: JSON.stringify({ status: 'COD_DELIVERED' as CODOrderStatus, collectedCod: true }),
     });
     return res.order;
   },

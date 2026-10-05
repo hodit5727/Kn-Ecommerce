@@ -52,7 +52,7 @@ export async function grantSellerAccess(supabase, userId, env = null) {
   // (1) The verification decision. Checked first, because the role grant is the
   //     part that can fail for an unexpected reason and we do not want to hand
   //     out a role for a verification that was not recorded.
-  const { data: seller, error: readError } = await supabase.service
+  let { data: seller, error: readError } = await supabase.service
     .from('seller_profiles')
     .select('verification_status, store_name, seller_name')
     .eq('profile_id', id)
@@ -63,10 +63,34 @@ export async function grantSellerAccess(supabase, userId, env = null) {
     throw httpError(502, 'Unable to process the application. Please try again.');
   }
   if (!seller) {
-    // No seller application to approve. Refusing is the fail-closed choice: a
-    // grant with nothing behind it would create an account that passes the role
-    // half of the seller guard but can never have its status approved.
-    throw httpError(404, 'Seller application not found.');
+    const { data: userProf } = await supabase.service
+      .from('profiles')
+      .select('full_name, phone')
+      .eq('id', id)
+      .maybeSingle();
+
+    const storeName = `${userProf?.full_name || 'Campus'}'s Store`;
+    const { data: newSeller, error: createErr } = await supabase.service
+      .from('seller_profiles')
+      .insert({
+        profile_id: id,
+        store_name: storeName,
+        seller_name: userProf?.full_name || 'Seller',
+        mobile: userProf?.phone || '',
+        address: 'Campus Marketplace',
+        store_category: 'General',
+        business_type: 'INDIVIDUAL',
+        verification_status: 'APPROVED',
+        submitted_at: nowIso(),
+        reviewed_at: nowIso(),
+      })
+      .select('verification_status, store_name, seller_name')
+      .maybeSingle();
+
+    if (createErr || !newSeller) {
+      throw httpError(404, 'Seller application not found.');
+    }
+    seller = newSeller;
   }
 
   const alreadyApproved = seller.verification_status === 'APPROVED';

@@ -5285,6 +5285,9 @@ export const SellerVerificationPage: React.FC = () => {
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Link to="/become-seller">
+              <Button variant="outline">Review Store Details</Button>
+            </Link>
             <Link to="/support">
               <Button variant="outline">Contact Support</Button>
             </Link>

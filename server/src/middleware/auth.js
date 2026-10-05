@@ -72,8 +72,19 @@ export function requireRole(supabase, env, ...roles) {
   return async (req, _res, next) => {
     try {
       if (!req.auth || !req.auth.profile) throw httpError(401, 'Not signed in.');
-      const { role } = req.auth.profile;
-      if (!roles.includes(role)) {
+      const profile = req.auth.profile;
+      const userRoles = new Set();
+      if (profile.role) userRoles.add(String(profile.role).toUpperCase());
+      if (Array.isArray(profile.roles)) {
+        profile.roles.forEach((r) => userRoles.add(String(r).toUpperCase()));
+      }
+      // SUPER_ADMIN has full ADMIN parity
+      if (userRoles.has('SUPER_ADMIN')) {
+        userRoles.add('ADMIN');
+      }
+
+      const hasRequiredRole = roles.some((r) => userRoles.has(String(r).toUpperCase()));
+      if (!hasRequiredRole) {
         throw httpError(403, 'Forbidden.');
       }
       return next();

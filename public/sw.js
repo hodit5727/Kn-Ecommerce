@@ -1,5 +1,5 @@
 // K-SHOP PWA Service Worker for Delivery Portal & Offline Capabilities
-const CACHE_NAME = 'kshop-delivery-pwa-v1';
+const CACHE_NAME = 'kshop-delivery-pwa-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/delivery',
@@ -35,20 +35,33 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests for navigation and static assets
   if (event.request.method !== 'GET') return;
 
-  // Let API requests pass directly to the network
-  if (event.request.url.includes('/api/')) return;
+  try {
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
+    // Never intercept API routes or admin routes
+    if (url.pathname.startsWith('/api') || url.pathname.startsWith('/admin')) {
+      return;
+    }
+
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
         if (event.request.mode === 'navigate') {
-          return caches.match('/delivery') || caches.match('/');
+          const fallback = (await caches.match('/delivery')) || (await caches.match('/'));
+          if (fallback) return fallback;
         }
-      });
-    })
-  );
+        return new Response('Network unavailable', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      })
+    );
+  } catch (err) {
+    // If URL parsing fails, ignore request
+  }
 });

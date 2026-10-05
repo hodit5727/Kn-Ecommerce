@@ -25,6 +25,7 @@ import {
   Package,
   ShieldCheck,
   Download,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatINR } from '../../lib/currency';
@@ -40,21 +41,29 @@ export const AdminOrdersPage: React.FC = () => {
   const [billOrder, setBillOrder] = useState<Order | null>(null);
   const { showToast } = useToast();
 
-  const loadOrders = async () => {
-    setIsLoading(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const loadOrders = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    else setIsRefreshing(true);
     setError(null);
     try {
       const data = await orderService.getOrders();
       setOrders(data);
     } catch (err: any) {
-      setError(err.message || 'Unable to retrieve administrative orders.');
+      if (!silent) setError(err.message || 'Unable to retrieve administrative orders.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadOrders();
+    const timer = setInterval(() => {
+      loadOrders(true);
+    }, 20000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleUpdateStatus = async (orderId: string, status: CODOrderStatus) => {
@@ -126,6 +135,15 @@ export const AdminOrdersPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadOrders()}
+            disabled={isLoading || isRefreshing}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-burgundy' : 'text-stone-600'}`} />}
+          >
+            {isRefreshing ? 'Syncing...' : 'Refresh Feed'}
+          </Button>
           <Button
             variant="outline"
             size="sm"

@@ -70,15 +70,23 @@ async function fetchRowsOrThrow(supabase, table, label) {
   return data ?? [];
 }
 
+function hasPrivilegedOrderAccess(profile) {
+  if (!profile) return false;
+  const allRoles = new Set();
+  if (profile.role) allRoles.add(String(profile.role).toUpperCase());
+  if (Array.isArray(profile.roles)) {
+    profile.roles.forEach((r) => allRoles.add(String(r).toUpperCase()));
+  }
+  return (
+    allRoles.has('ADMIN') ||
+    allRoles.has('SUPER_ADMIN') ||
+    allRoles.has('DELIVERY_PERSON')
+  );
+}
+
 /** Resolve which orders the authenticated profile may see. */
 async function scopedOrderIds({ profile }, orders) {
-  if (
-    profile.role === 'ADMIN' ||
-    (Array.isArray(profile.roles) &&
-      (profile.roles.includes('ADMIN') ||
-        profile.roles.includes('SUPER_ADMIN') ||
-        profile.roles.includes('DELIVERY_PERSON')))
-  ) {
+  if (hasPrivilegedOrderAccess(profile)) {
     return null; // all
   }
   if (isSeller(profile)) return orders.filter((o) => o.seller_id === profile.id).map((o) => o.id);
@@ -86,13 +94,7 @@ async function scopedOrderIds({ profile }, orders) {
 }
 
 async function canActOnOrder({ profile }, order) {
-  if (
-    profile.role === 'ADMIN' ||
-    (Array.isArray(profile.roles) &&
-      (profile.roles.includes('ADMIN') ||
-        profile.roles.includes('SUPER_ADMIN') ||
-        profile.roles.includes('DELIVERY_PERSON')))
-  ) {
+  if (hasPrivilegedOrderAccess(profile)) {
     return true;
   }
   if (isSeller(profile)) return order.seller_id === profile.id;
@@ -279,6 +281,11 @@ export function createOrdersRouter({ env, supabase }) {
     const patch = { status: nextDb, updated_at: now };
     if (nextDb === 'DELIVERED') {
       patch.delivered_at = now;
+      if (req.body?.collectedCod === true || req.body?.receivedAmount != null) {
+        patch.received_amount = Number(req.body?.receivedAmount ?? order.total) || 0;
+        patch.received_at = now;
+        patch.received_by = req.auth.profile.id;
+      }
     }
     if (nextDb === 'CANCELLED') {
       patch.cancelled_at = now;

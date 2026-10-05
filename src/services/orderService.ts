@@ -129,7 +129,7 @@ export const orderService = {
   ): Promise<Order> {
     const res = await apiRequest<OrderResponse>(`/orders/${encodeURIComponent(orderId)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, collectedCod: status === 'COD_DELIVERED' }),
     });
     return res.order;
   },
