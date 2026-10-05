@@ -266,9 +266,14 @@ export function createRefundsRouter({ env, supabase }) {
     const retId = crypto.randomUUID();
     const refundId = crypto.randomUUID();
     const nowIso = now.toISOString();
+    const retDatePart = nowIso.slice(0, 10).replace(/-/g, '');
+    const cryptoRetSuffix = String(crypto.randomInt(1000000, 10000000));
+    const returnNumber = `RT-${retDatePart}-${cryptoRetSuffix}`;
+
     try {
       const { error: retError } = await supabase.service.from('returns').insert({
         id: retId,
+        return_number: returnNumber,
         order_id: orderId,
         customer_id: profile.id,
         reason,

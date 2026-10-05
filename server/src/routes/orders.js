@@ -361,8 +361,12 @@ export function createOrdersRouter({ env, supabase }) {
             );
             const newBalance = Math.round((prevBalance + orderTotal) * 100) / 100;
 
+            const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
+            const txnRef = `TXN-${cryptoTxnDigits}`;
+
             await supabase.service.from('transactions').insert({
               id: crypto.randomUUID(),
+              txn_ref: txnRef,
               order_id: order.id,
               customer_id: order.customer_id,
               seller_id: order.seller_id,
@@ -643,9 +647,16 @@ export function createOrdersRouter({ env, supabase }) {
       recipient_phone: addr.phone,
     };
 
+    // Cryptographically secure unguessable order number
+    // Format: KS-YYYYMMDD-XXXXXXX (7 random digits), satisfying DB schema and regexes
+    const datePart = now.slice(0, 10).replace(/-/g, '');
+    const cryptoOrderSuffix = String(crypto.randomInt(1000000, 10000000));
+    const orderNumber = `KS-${datePart}-${cryptoOrderSuffix}`;
+
     try {
       const { error: orderError } = await supabase.service.from('orders').insert({
         id: orderId,
+        order_number: orderNumber,
         customer_id: profile.id,
         seller_id: sellerId,
         status: 'PLACED',

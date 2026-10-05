@@ -1118,8 +1118,12 @@ export function createAdminManagementRouter({ env, supabase }) {
       const prevBalance = (allTxns ?? []).reduce((max, t) => Math.max(max, Number(t.balance_after) || 0), 0);
       const newBalance = Math.max(0, Math.round((prevBalance - netAmount) * 100) / 100);
 
+      const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
+      const txnRef = `TXN-${cryptoTxnDigits}`;
+
       await supabase.service.from('transactions').insert({
         id: crypto.randomUUID(),
+        txn_ref: txnRef,
         order_id: found.order_id,
         seller_id: found.seller_id,
         txn_type: 'PAYOUT',

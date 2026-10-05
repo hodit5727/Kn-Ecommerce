@@ -19,7 +19,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     message &&
       (message.toLowerCase().includes('not signed in') ||
         message.toLowerCase().includes('session expired') ||
-        message.toLowerCase().includes('not authenticated'))
+        message.toLowerCase().includes('not authenticated') ||
+        message.toLowerCase().includes('unauthorized') ||
+        message.toLowerCase().includes('401') ||
+        message.toLowerCase().includes('login required') ||
+        message.toLowerCase().includes('sign in'))
   );
 
   React.useEffect(() => {
@@ -33,7 +37,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 
       const timer = setTimeout(() => {
         window.location.href = targetLogin;
-      }, 1000);
+      }, 250);
       return () => clearTimeout(timer);
     }
   }, [isAuthError]);

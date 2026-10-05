@@ -183,7 +183,7 @@ test('POST /orders computes totals server-side, ignores client prices, decrement
     assert.equal(order.subtotal, 10997);
     assert.equal(order.deliveryFee, 0);
     assert.equal(order.totalAmount, 10997);
-    assert.match(order.orderNumber, /^KS-20260925-\d{7}$/);
+    assert.match(order.orderNumber, /^KS-\d{8}-\d{7}$/);
     assert.equal(order.orderStatus, 'COD_PENDING');
     assert.equal(order.lineItems ? order.lineItems.length : order.items.length, 2);
     assert.equal(order.items[0].product.price, 499);
