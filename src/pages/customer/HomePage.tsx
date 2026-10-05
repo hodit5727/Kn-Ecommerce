@@ -142,19 +142,19 @@ export const HomePage: React.FC = () => {
   // EmptyState/ErrorState rendering in the catalog section below.
 
   return (
-    <div className="space-y-16 pb-24">
-      {/* 1. SOVEREIGN LUXURY HERO SECTION - 100% ACCURATE SINGLE LAYER WITH ZERO DOUBLE-LAYERING */}
-      <section className="relative w-full overflow-hidden bg-[#FAF7F2] border-b border-cream-200/80 min-h-[580px] lg:min-h-[630px] flex items-center">
-        {/* Pristine Clean Background: Sunlit Roman Arches, Golden Ring, Marble Pedestal & Water Ripples */}
+    <div className="space-y-10 sm:space-y-16 pb-24">
+      {/* 1. SOVEREIGN LUXURY HERO SECTION */}
+      <section className="relative w-full overflow-hidden bg-[#FAF7F2] border-b border-cream-200/80 min-h-auto py-8 sm:py-12 lg:py-16 flex items-center">
+        {/* Clean Background: Sunlit Roman Arches & Marble Pedestal */}
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center no-repeat pointer-events-none"
           style={{ backgroundImage: "url('/hero-water-scene.jpg')" }}
         />
 
-        {/* Soft warm ivory wash on left for flawless text contrast & readability */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#FAF7F2]/90 via-[#FAF7F2]/75 sm:via-[#FAF7F2]/55 to-transparent w-full lg:w-[52%] pointer-events-none" />
+        {/* Soft warm ivory wash on left for text contrast & readability */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#FAF7F2]/95 via-[#FAF7F2]/80 sm:via-[#FAF7F2]/60 to-transparent w-full lg:w-[55%] pointer-events-none" />
 
-        {/* Far-Left Vertical Architectural Typography */}
+        {/* Far-Left Vertical Architectural Typography (Hidden on mobile & tablet) */}
         <div className="hidden xl:flex flex-col items-center justify-center absolute left-5 top-1/2 -translate-y-1/2 z-10 text-[9px] uppercase tracking-[0.38em] text-stone-500/80 font-serif space-y-3 pointer-events-none select-none">
           <span>T</span><span>I</span><span>M</span><span>E</span>
           <span className="w-1 h-1 rounded-full bg-burgundy/40 my-1" />
@@ -166,44 +166,44 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Main Content Container */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10 w-full py-12 lg:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
             
-            {/* Left Narrative Column - Real UI Components */}
-            <div className="lg:col-span-6 space-y-5 max-w-xl">
+            {/* Left Narrative Column */}
+            <div className="lg:col-span-6 space-y-4 sm:space-y-5 max-w-xl">
               {/* Top Spaced Subtitle */}
-              <div className="text-[11px] uppercase tracking-[0.38em] text-stone-600 font-serif font-medium select-none">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-stone-600 font-serif font-semibold select-none">
                 CURATE &nbsp;×&nbsp; COLLECT &nbsp;×&nbsp; CHERISH
               </div>
 
               {/* Pill Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-xs border border-stone-300/80 text-xs font-semibold text-stone-800 shadow-xs">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs border border-stone-300/80 text-[11px] font-semibold text-stone-800 shadow-2xs">
                 <Sparkles className="w-3.5 h-3.5 text-burgundy" />
-                <span>Curated Sovereign Marketplace • COD Protocol</span>
+                <span>Curated Marketplace • COD Protocol</span>
               </div>
 
               {/* Masterpieces Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-serif font-extrabold text-stone-900 tracking-tight leading-[1.08]">
+              <h1 className="text-3xl sm:text-4xl lg:text-[50px] font-serif font-extrabold text-stone-900 tracking-tight leading-[1.12]">
                 MASTERPIECES OF <br />
                 <span className="text-burgundy italic font-serif">Enduring</span> <br />
                 PROVENANCE.
               </h1>
 
               {/* Narrative Subtitle */}
-              <p className="text-sm sm:text-base text-stone-700 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm lg:text-base text-stone-700 leading-relaxed font-normal">
                 Connect directly with master horologists, jewelers, and atelier guilds.
-                Inspect each piece in 3D and pay exclusively upon white-glove delivery.
+                Inspect each piece upon delivery and pay with 100% Cash on Delivery.
               </p>
 
-              {/* Real UI Buttons */}
-              <div className="flex flex-wrap items-center gap-4 pt-1">
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 pt-1 max-w-md">
                 <button
                   type="button"
                   onClick={() => {
                     const el = document.getElementById('catalog-index');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center justify-center gap-2.5 bg-burgundy hover:bg-burgundy-800 active:scale-[0.98] text-white font-serif font-medium text-sm px-6 py-3 rounded-xl shadow-soft hover:shadow-md transition-all duration-200 cursor-pointer select-none"
+                  className="inline-flex items-center justify-center gap-2 bg-burgundy hover:bg-burgundy-800 active:scale-[0.98] text-white font-serif font-semibold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-soft hover:shadow-md transition-all min-h-[44px] cursor-pointer select-none"
                 >
                   <span>Explore Catalog</span>
                   <ArrowRight className="w-4 h-4" />
@@ -215,32 +215,31 @@ export const HomePage: React.FC = () => {
                     const el = document.getElementById('catalog-index');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center justify-center gap-2 bg-white/90 hover:bg-white active:scale-[0.98] text-stone-800 border border-stone-300/90 font-serif font-medium text-sm px-5 py-3 rounded-xl shadow-xs hover:shadow-soft transition-all duration-200 cursor-pointer select-none"
+                  className="inline-flex items-center justify-center gap-1.5 bg-white/95 hover:bg-white active:scale-[0.98] text-stone-800 border border-stone-300 font-serif font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-2xs hover:shadow-soft transition-all min-h-[44px] cursor-pointer select-none"
                 >
                   <span>Catalog Index ↓</span>
                   <ChevronDown className="w-4 h-4 text-burgundy" />
                 </button>
               </div>
 
-              {/* Real Trust Bar */}
-              <div className="pt-3 flex items-center gap-4 text-xs text-stone-700">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-burgundy" />
-                  <span>100% Cash on Delivery Only</span>
+              {/* Real Trust Bar: 2-Column Responsive Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
+                  <ShieldCheck className="w-4 h-4 text-burgundy shrink-0" />
+                  <span className="text-[11px] font-semibold text-stone-800 leading-tight">100% Cash on Delivery</span>
                 </div>
-                <span className="text-stone-300">|</span>
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Truck className="w-4 h-4 text-burgundy" />
-                  <span>White-Glove Courier Inspection</span>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
+                  <Truck className="w-4 h-4 text-burgundy shrink-0" />
+                  <span className="text-[11px] font-semibold text-stone-800 leading-tight">White-Glove Courier</span>
                 </div>
               </div>
             </div>
 
             {/* Right Showcase Column - Single Floating Watch & Floating AirPods Over Marble Pedestal */}
-            <div className="lg:col-span-6 relative h-[420px] sm:h-[460px] lg:h-[500px] flex items-center justify-center">
+            <div className="lg:col-span-6 relative h-[250px] sm:h-[360px] lg:h-[500px] flex items-center justify-center">
               
-              {/* Real UI Card: Certified Horology (Top Left of Watch) */}
-              <div className="absolute top-2 sm:top-6 left-2 sm:left-6 z-30 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl border border-cream-200 shadow-soft max-w-[210px] animate-float-case">
+              {/* Real UI Card: Certified Horology (Top Left of Watch) - Hidden on extra-small mobile */}
+              <div className="hidden sm:block absolute top-2 sm:top-6 left-2 sm:left-6 z-30 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl border border-cream-200 shadow-soft max-w-[210px] animate-float-case">
                 <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-burgundy mb-1">
                   <span>CERTIFIED HOROLOGY</span>
                   <Sparkles className="w-3 h-3 text-burgundy" />
@@ -547,7 +546,7 @@ export const HomePage: React.FC = () => {
                 isRetrying={isLoading}
               />
             ) : isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <ProductCardSkeleton key={i} />
                 ))}
@@ -563,7 +562,7 @@ export const HomePage: React.FC = () => {
               <div
                 className={
                   viewMode === 'grid'
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+                    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
                     : 'space-y-4'
                 }
               >

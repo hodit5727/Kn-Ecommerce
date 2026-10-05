@@ -227,7 +227,7 @@ export const OrderDetailPage: React.FC = () => {
         }
       `}</style>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Back navigation */}
         <Link
           to="/orders"
@@ -237,9 +237,9 @@ export const OrderDetailPage: React.FC = () => {
         </Link>
 
         {/* Printable Master Container */}
-        <div id="printable-order-section" className="space-y-6">
+        <div id="printable-order-section" className="space-y-4 sm:space-y-6">
           {/* Header Banner */}
-          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-cream-200 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-7 border border-cream-200 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-burgundy bg-burgundy/10 px-2 py-0.5 rounded">

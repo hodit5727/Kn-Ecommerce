@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   ChevronRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Zap
 } from 'lucide-react';
 
 export const ProductDetailPage: React.FC = () => {
@@ -210,32 +211,32 @@ export const ProductDetailPage: React.FC = () => {
   const primaryImage = product.images[activeImageIndex] || product.images[0];
 
   return (
-    <div className="min-h-screen bg-[#FFF9F2]/30 py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
         {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-2 text-xs text-[#6B625C]">
-          <Link to="/" className="hover:text-[#8F0025] transition-colors">Home</Link>
-          <ChevronRight className="w-3 h-3 text-[#E8DCCF]" />
-          <Link to="/products" className="hover:text-[#8F0025] transition-colors">Catalog</Link>
+        <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[#6B625C] overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+          <Link to="/" className="hover:text-[#8F0025] transition-colors shrink-0">Home</Link>
+          <ChevronRight className="w-3 h-3 text-[#E8DCCF] shrink-0" />
+          <Link to="/products" className="hover:text-[#8F0025] transition-colors shrink-0">Catalog</Link>
           {product.category && (
             <>
-              <ChevronRight className="w-3 h-3 text-[#E8DCCF]" />
-              <Link to={`/products?category=${encodeURIComponent(product.category)}`} className="hover:text-[#8F0025] transition-colors">
+              <ChevronRight className="w-3 h-3 text-[#E8DCCF] shrink-0" />
+              <Link to={`/products?category=${encodeURIComponent(product.category)}`} className="hover:text-[#8F0025] transition-colors shrink-0">
                 {product.category}
               </Link>
             </>
           )}
-          <ChevronRight className="w-3 h-3 text-[#E8DCCF]" />
-          <span className="text-[#171717] font-semibold truncate max-w-xs sm:max-w-md">
+          <ChevronRight className="w-3 h-3 text-[#E8DCCF] shrink-0" />
+          <span className="text-[#171717] font-semibold truncate max-w-[160px] sm:max-w-md">
             {product.name}
           </span>
         </nav>
 
         {/* ── MAIN PRODUCT SHOWCASE (Compact 50/50 Layout) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 items-start">
           {/* Left Column: Media Stage & 3D Interactive Viewport */}
           <div className="space-y-3 lg:sticky lg:top-6">
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-xs">
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-2xs">
               {activeMediaTab === '3d' ? (
                 <Product3DViewer product={product} className="w-full h-full" autoRotate={true} />
               ) : (
@@ -244,6 +245,13 @@ export const ProductDetailPage: React.FC = () => {
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
+              )}
+
+              {/* Mobile Image Counter Badge */}
+              {product.images.length > 1 && (
+                <div className="absolute bottom-3 right-3 bg-stone-900/70 backdrop-blur-xs text-white px-2 py-0.5 rounded-full text-[10px] font-mono font-bold z-10">
+                  {activeImageIndex + 1} / {product.images.length}
+                </div>
               )}
 
               {/* Media Mode Switcher (2D / 3D) */}
@@ -691,6 +699,41 @@ export const ProductDetailPage: React.FC = () => {
           onClose={() => setIsInteriorModalOpen(false)}
           product={product}
         />
+      </div>
+
+      {/* ── MOBILE BOTTOM STICKY ACTION BAR ── */}
+      <div
+        className="fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-cream-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:hidden p-3 flex items-center justify-between gap-3"
+      >
+        <div className="shrink-0">
+          <span className="text-[10px] uppercase font-bold text-[#6B625C] block leading-tight">
+            Total Price
+          </span>
+          <span className="text-xl font-serif font-bold text-[#171717] leading-none">
+            {formatINR(currentPrice * quantity)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 max-w-[240px]">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={currentStock <= 0}
+            className="flex-1 py-2.5 rounded-xl border border-[#8F0025] text-[#8F0025] bg-white text-xs font-bold flex items-center justify-center gap-1 active:bg-[#8F0025]/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Bag</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={currentStock <= 0}
+            className="flex-1 py-2.5 rounded-xl bg-[#8F0025] hover:bg-[#72001e] text-white text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+            <span>Buy COD</span>
+          </button>
+        </div>
       </div>
     </div>
   );

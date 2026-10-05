@@ -170,13 +170,13 @@ export const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="border-b border-cream-200 pb-6">
+      <div className="border-b border-cream-200 pb-4 sm:pb-6">
         <span className="text-xs font-bold uppercase tracking-wider text-burgundy block mb-1">
           Cash on Delivery
         </span>
-        <h1 className="text-3xl font-serif font-bold text-stone-900">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
           Order Checkout
         </h1>
       </div>
@@ -189,11 +189,11 @@ export const CheckoutPage: React.FC = () => {
         />
       )}
 
-      <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
         {/* Left Column: Form Steps */}
         <div className="lg:col-span-7 space-y-6">
           {/* Step 1: Destination Address */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-cream-200 shadow-soft space-y-5">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-cream-200 shadow-soft space-y-5">
             <div className="flex items-center gap-2 text-stone-900 pb-3 border-b border-cream-200">
               <MapPin className="w-5 h-5 text-burgundy" />
               <h2 className="font-serif font-bold text-lg">1. Campus Delivery Location</h2>
