@@ -12,6 +12,11 @@
  * exists ONLY in .env / Railway dashboard — never in source, never bundled.
  */
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
+
+if (typeof globalThis.WebSocket === 'undefined') {
+  globalThis.WebSocket = WebSocket;
+}
 
 export function createSupabaseClients(env) {
   const common = {
@@ -19,6 +24,9 @@ export function createSupabaseClients(env) {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+    },
+    realtime: {
+      transport: WebSocket,
     },
   };
   const anon = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, common);

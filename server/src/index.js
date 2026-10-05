@@ -11,6 +11,10 @@
  *
  * Zero secrets in code — everything comes from the environment (§2.9).
  */
+import WebSocket from 'ws';
+if (typeof globalThis.WebSocket === 'undefined') {
+  globalThis.WebSocket = WebSocket;
+}
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
