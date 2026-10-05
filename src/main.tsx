@@ -11,3 +11,12 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   </React.StrictMode>,
 );
+
+// Register PWA service worker for Android APK & offline delivery support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Service worker registration error handled silently in client
+    });
+  });
+}
