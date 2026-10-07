@@ -271,6 +271,22 @@ export const adminService = {
     });
   },
 
+  async getTrendingProducts(): Promise<{
+    products: (Product & { soldCount: number; totalRevenue: number; sellerStoreName?: string })[];
+    top10: (Product & { soldCount: number; totalRevenue: number; sellerStoreName?: string })[];
+    metrics: { activeTrendingCount: number; totalUnitsSold: number; totalProducts: number };
+  }> {
+    return await apiRequest('/admin/trending', { method: 'GET' });
+  },
+
+  async toggleProductTrending(productId: string, isTrending: boolean): Promise<boolean> {
+    const res = await apiRequest<{ success: boolean; isTrending: boolean }>('/admin/trending/toggle', {
+      method: 'POST',
+      body: JSON.stringify({ productId, isTrending }),
+    });
+    return res.isTrending;
+  },
+
   async getAuditLogs(): Promise<SystemAuditLog[]> {
     const res = await apiRequest<{ logs: SystemAuditLog[] }>('/admin/audit-logs', {
       method: 'GET',

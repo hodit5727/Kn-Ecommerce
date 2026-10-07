@@ -23,6 +23,7 @@ import {
   Ticket,
   UserCheck,
   Activity,
+  Flame,
 } from 'lucide-react';
 
 
@@ -43,6 +44,7 @@ export const AdminLayout: React.FC = () => {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },
     { name: 'Products', href: '/admin/products', icon: Package },
+    { name: 'Trending & Top Sold', href: '/admin/trending', icon: Flame },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Sellers', href: '/admin/sellers', icon: Store },
     { name: 'Returns & Refunds', href: '/admin/refunds', icon: RotateCcw },

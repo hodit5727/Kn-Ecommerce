@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../rbac/RoleGuard';
 
@@ -7,59 +7,68 @@ import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { SellerLayout } from '../components/layout/SellerLayout';
 import { AdminLayout } from '../components/layout/AdminLayout';
 
-// Customer Pages
+// Core Storefront Pages (Eagerly loaded for instant first paint)
 import { HomePage } from '../pages/customer/HomePage';
 import { ProductsPage } from '../pages/customer/ProductsPage';
 import { ProductDetailPage } from '../pages/customer/ProductDetailPage';
 import { CartPage } from '../pages/customer/CartPage';
 import { CheckoutPage } from '../pages/customer/CheckoutPage';
 import { OrdersPage } from '../pages/customer/OrdersPage';
-import { OrderDetailPage } from '../pages/customer/OrderDetailPage';
-import { RefundsPage } from '../pages/customer/RefundsPage';
-import { WishlistPage } from '../pages/customer/WishlistPage';
-import { ProfilePage } from '../pages/customer/ProfilePage';
-import { BecomeSellerPage } from '../pages/customer/BecomeSellerPage';
-import { SellerVerificationPage } from '../pages/customer/SellerVerificationPage';
-import { SupportPage } from '../pages/customer/SupportPage';
-
-// Seller Pages
-import { SellerDashboardPage } from '../pages/seller/SellerDashboardPage';
-import { SellerProductsPage } from '../pages/seller/SellerProductsPage';
-import { SellerAddProductPage } from '../pages/seller/SellerAddProductPage';
-import { SellerInventoryPage } from '../pages/seller/SellerInventoryPage';
-import { SellerOrdersPage } from '../pages/seller/SellerOrdersPage';
-import { SellerRevenuePage } from '../pages/seller/SellerRevenuePage';
-import { SellerTransactionsPage } from '../pages/seller/SellerTransactionsPage';
-import { SellerSettlementsPage } from '../pages/seller/SellerSettlementsPage';
-import { SellerRefundsPage } from '../pages/seller/SellerRefundsPage';
-import { SellerSettingsPage } from '../pages/seller/SellerSettingsPage';
-
-// Admin Pages
-import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
-import { AdminOrdersPage } from '../pages/admin/AdminOrdersPage';
-import { AdminProductsPage } from '../pages/admin/AdminProductsPage';
-import { AdminCustomersPage } from '../pages/admin/AdminCustomersPage';
-import { AdminSellersPage } from '../pages/admin/AdminSellersPage';
-import { AdminRefundsPage } from '../pages/admin/AdminRefundsPage';
-import { AdminTransactionsPage } from '../pages/admin/AdminTransactionsPage';
-import { AdminSettlementsPage } from '../pages/admin/AdminSettlementsPage';
-import { AdminAnnouncementsPage } from '../pages/admin/AdminAnnouncementsPage';
-import { AdminSettingsPage } from '../pages/admin/AdminSettingsPage';
-import { AdminCouponsPage } from '../pages/admin/AdminCouponsPage';
-import { AdminOperatorsPage } from '../pages/admin/AdminOperatorsPage';
-import { AdminMonitoringPage } from '../pages/admin/AdminMonitoringPage';
-
-// Delivery Mobile Portal Pages
-import { DeliveryLoginPage } from '../pages/delivery/DeliveryLoginPage';
-import { DeliveryDashboardPage } from '../pages/delivery/DeliveryDashboardPage';
-
-// Auth Pages
 import { LoginPage } from '../pages/auth/LoginPage';
-import { AdminLoginPage } from '../pages/admin/AdminLoginPage';
-import { UnauthorizedPage } from '../pages/auth/UnauthorizedPage';
+
+// Customer Secondary Pages (Lazy loaded on demand)
+const OrderDetailPage = lazy(() => import('../pages/customer/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));
+const RefundsPage = lazy(() => import('../pages/customer/RefundsPage').then(m => ({ default: m.RefundsPage })));
+const WishlistPage = lazy(() => import('../pages/customer/WishlistPage').then(m => ({ default: m.WishlistPage })));
+const ProfilePage = lazy(() => import('../pages/customer/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const BecomeSellerPage = lazy(() => import('../pages/customer/BecomeSellerPage').then(m => ({ default: m.BecomeSellerPage })));
+const SellerVerificationPage = lazy(() => import('../pages/customer/SellerVerificationPage').then(m => ({ default: m.SellerVerificationPage })));
+const SupportPage = lazy(() => import('../pages/customer/SupportPage').then(m => ({ default: m.SupportPage })));
+const UnauthorizedPage = lazy(() => import('../pages/auth/UnauthorizedPage').then(m => ({ default: m.UnauthorizedPage })));
+
+// Seller Portal Pages (Lazy loaded only when /seller is accessed)
+const SellerDashboardPage = lazy(() => import('../pages/seller/SellerDashboardPage').then(m => ({ default: m.SellerDashboardPage })));
+const SellerProductsPage = lazy(() => import('../pages/seller/SellerProductsPage').then(m => ({ default: m.SellerProductsPage })));
+const SellerAddProductPage = lazy(() => import('../pages/seller/SellerAddProductPage').then(m => ({ default: m.SellerAddProductPage })));
+const SellerInventoryPage = lazy(() => import('../pages/seller/SellerInventoryPage').then(m => ({ default: m.SellerInventoryPage })));
+const SellerOrdersPage = lazy(() => import('../pages/seller/SellerOrdersPage').then(m => ({ default: m.SellerOrdersPage })));
+const SellerRevenuePage = lazy(() => import('../pages/seller/SellerRevenuePage').then(m => ({ default: m.SellerRevenuePage })));
+const SellerTransactionsPage = lazy(() => import('../pages/seller/SellerTransactionsPage').then(m => ({ default: m.SellerTransactionsPage })));
+const SellerSettlementsPage = lazy(() => import('../pages/seller/SellerSettlementsPage').then(m => ({ default: m.SellerSettlementsPage })));
+const SellerRefundsPage = lazy(() => import('../pages/seller/SellerRefundsPage').then(m => ({ default: m.SellerRefundsPage })));
+const SellerSettingsPage = lazy(() => import('../pages/seller/SellerSettingsPage').then(m => ({ default: m.SellerSettingsPage })));
+
+// Admin Governance Pages (Lazy loaded only when /admin is accessed)
+const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+const AdminOrdersPage = lazy(() => import('../pages/admin/AdminOrdersPage').then(m => ({ default: m.AdminOrdersPage })));
+const AdminProductsPage = lazy(() => import('../pages/admin/AdminProductsPage').then(m => ({ default: m.AdminProductsPage })));
+const AdminTrendingPage = lazy(() => import('../pages/admin/AdminTrendingPage').then(m => ({ default: m.AdminTrendingPage })));
+const AdminCustomersPage = lazy(() => import('../pages/admin/AdminCustomersPage').then(m => ({ default: m.AdminCustomersPage })));
+const AdminSellersPage = lazy(() => import('../pages/admin/AdminSellersPage').then(m => ({ default: m.AdminSellersPage })));
+const AdminRefundsPage = lazy(() => import('../pages/admin/AdminRefundsPage').then(m => ({ default: m.AdminRefundsPage })));
+const AdminTransactionsPage = lazy(() => import('../pages/admin/AdminTransactionsPage').then(m => ({ default: m.AdminTransactionsPage })));
+const AdminSettlementsPage = lazy(() => import('../pages/admin/AdminSettlementsPage').then(m => ({ default: m.AdminSettlementsPage })));
+const AdminAnnouncementsPage = lazy(() => import('../pages/admin/AdminAnnouncementsPage').then(m => ({ default: m.AdminAnnouncementsPage })));
+const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })));
+const AdminCouponsPage = lazy(() => import('../pages/admin/AdminCouponsPage').then(m => ({ default: m.AdminCouponsPage })));
+const AdminOperatorsPage = lazy(() => import('../pages/admin/AdminOperatorsPage').then(m => ({ default: m.AdminOperatorsPage })));
+const AdminMonitoringPage = lazy(() => import('../pages/admin/AdminMonitoringPage').then(m => ({ default: m.AdminMonitoringPage })));
+const AdminLoginPage = lazy(() => import('../pages/admin/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })));
+
+// Delivery Mobile Portal Pages (Lazy loaded only when /delivery is accessed)
+const DeliveryLoginPage = lazy(() => import('../pages/delivery/DeliveryLoginPage').then(m => ({ default: m.DeliveryLoginPage })));
+const DeliveryDashboardPage = lazy(() => import('../pages/delivery/DeliveryDashboardPage').then(m => ({ default: m.DeliveryDashboardPage })));
+
+const RouteLoadingFallback = () => (
+  <div className="min-h-[40vh] flex flex-col items-center justify-center p-8 gap-3">
+    <div className="w-8 h-8 rounded-full border-2 border-burgundy border-t-transparent animate-spin" />
+    <span className="text-xs text-stone-400 font-medium">Loading view...</span>
+  </div>
+);
 
 export const AppRoutes: React.FC = () => {
   return (
+    <Suspense fallback={<RouteLoadingFallback />}>
     <Routes>
       {/* Customer Storefront Routes */}
       <Route element={<CustomerLayout />}>
@@ -112,6 +121,7 @@ export const AppRoutes: React.FC = () => {
         <Route index element={<AdminDashboardPage />} />
         <Route path="orders" element={<AdminOrdersPage />} />
         <Route path="products" element={<AdminProductsPage />} />
+        <Route path="trending" element={<AdminTrendingPage />} />
         <Route path="customers" element={<AdminCustomersPage />} />
         <Route path="sellers" element={<AdminSellersPage />} />
         <Route path="refunds" element={<AdminRefundsPage />} />
@@ -138,5 +148,6 @@ export const AppRoutes: React.FC = () => {
       {/* Catch-all redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };

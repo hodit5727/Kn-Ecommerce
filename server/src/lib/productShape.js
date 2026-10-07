@@ -182,6 +182,12 @@ export function productToPublic(row, imageBase) {
     // yet; a rating is never invented (their phases add real values).
     rating: 0,
     reviewCount: 0,
+    isTrending: Boolean(row.verification_meta?.is_trending),
+    isFeatured: Boolean(row.verification_meta?.is_featured || row.verification_meta?.is_trending),
+    isNewArrival: Boolean(
+      row.verification_meta?.is_new_arrival ||
+      (row.created_at && (Date.now() - new Date(row.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000)
+    ),
     sellerId: row.seller_id,
     sellerName: row.seller?.full_name ?? '',
     sellerRating: 0,

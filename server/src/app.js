@@ -43,6 +43,7 @@ import { createSellerVerificationRouter } from './routes/sellerVerification.js';
 import { createAdminVerificationRouter } from './routes/adminVerification.js';
 import { createFaceVerificationProvider } from './lib/faceVerification/index.js';
 import { createFrameCache } from './lib/verification/frames.js';
+import compression from 'compression';
 import { notFoundHandler, createErrorHandler } from './lib/errors.js';
 import { recordIncident } from './lib/alerting.js';
 
@@ -50,6 +51,9 @@ export function createApp({ env, supabase, verification = null }) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // Railway / proxy fronting — req.ip is the real client
+
+  // High-performance gzip/brotli compression for API payloads and static assets
+  app.use(compression());
 
   // Face-verification provider + in-memory frame cache are created once per
   // process (lazy ML engine load). Tests inject deterministic replacements.
@@ -126,13 +130,24 @@ export function createApp({ env, supabase, verification = null }) {
 
   const distDir = findDistPath();
   if (distDir) {
-    app.use(express.static(distDir));
+    app.use(express.static(distDir, {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (filePath.includes('/assets/') || filePath.includes('\\assets\\')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    }));
     app.use((req, res, next) => {
       if (req.method !== 'GET') return next();
       if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
         return next();
       }
       const indexHtml = path.join(distDir, 'index.html');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.sendFile(indexHtml);
     });
   } else {

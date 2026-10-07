@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../../types/product';
-import { Heart, ShoppingBag, Eye, Star, Zap } from 'lucide-react';
+import { Heart, ShoppingBag, Eye, Star, Zap, Flame } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useToast } from '../../context/ToastContext';
@@ -74,12 +74,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
 
         {/* Badges Overlay */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 pointer-events-none z-10">
+          {product.isTrending && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-600 text-white text-[9px] font-bold tracking-wider uppercase shadow-xs">
+              <Flame className="w-2.5 h-2.5 fill-white text-white" />
+              Trending
+            </span>
+          )}
           {product.discountPercent && (
             <Badge variant="rosered" size="sm">
               -{product.discountPercent}%
             </Badge>
           )}
-          {product.isNewArrival && (
+          {product.isNewArrival && !product.isTrending && (
             <Badge variant="cream" size="sm">
               New
             </Badge>

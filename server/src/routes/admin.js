@@ -1159,5 +1159,133 @@ export function createAdminManagementRouter({ env, supabase }) {
     return ok(res, { success: true, status: 'RELEASED', releasedAt: now, bankReference: bankRef });
   });
 
+  // ── GET /admin/trending ────────────────────────────────────────────────
+  // Top seller sold products + trending status management
+  router.get('/admin/trending', async (req, res) => {
+    // 1. Fetch order items to calculate units sold and revenue per product
+    const { data: orderLines, error: linesErr } = await supabase.service
+      .from('order_items')
+      .select('product_id, quantity, line_total');
+    if (linesErr) {
+      // eslint-disable-next-line no-console
+      console.error('[admin/trending] order_items query failed:', linesErr.message);
+    }
+
+    const statsByProduct = new Map();
+    for (const line of orderLines ?? []) {
+      if (!line.product_id) continue;
+      const current = statsByProduct.get(line.product_id) || { soldCount: 0, totalRevenue: 0 };
+      current.soldCount += Number(line.quantity) || 0;
+      current.totalRevenue += Number(line.line_total) || 0;
+      statsByProduct.set(line.product_id, current);
+    }
+
+    // 2. Fetch all products
+    const { data: products, error: prodsErr } = await supabase.service
+      .from('products')
+      .select(`
+        id, name, brand, category, description, verification_meta, status, created_at, seller_id,
+        seller:profiles!products_seller_id_fkey(status, full_name),
+        variants:product_variants(id, sku, price, stock, is_active),
+        images:product_images(storage_bucket, storage_path, position, is_primary, mime_type)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (prodsErr) {
+      // eslint-disable-next-line no-console
+      console.error('[admin/trending] products query failed:', prodsErr.message);
+      throw httpError(500, 'Unable to load trending products.');
+    }
+
+    // 3. Fetch seller profiles for store names
+    const sellerIds = Array.from(new Set((products ?? []).map((p) => p.seller_id).filter(Boolean)));
+    const { data: sellerRows } = sellerIds.length > 0
+      ? await supabase.service.from('seller_profiles').select('profile_id, store_name').in('profile_id', sellerIds)
+      : { data: [] };
+    const storeMap = new Map((sellerRows ?? []).map((s) => [s.profile_id, s.store_name]));
+
+    const imageBase = env.SUPABASE_URL || '';
+    const mapped = (products ?? []).map((p) => {
+      const publicP = productToPublic(p, imageBase);
+      const st = statsByProduct.get(p.id) || { soldCount: 0, totalRevenue: 0 };
+      const storeName = storeMap.get(p.seller_id) || p.seller?.full_name || 'Artisan Atelier';
+      return {
+        ...publicP,
+        soldCount: st.soldCount,
+        totalRevenue: Math.round(st.totalRevenue * 100) / 100,
+        sellerStoreName: storeName,
+        isTrending: Boolean(p.verification_meta?.is_trending),
+      };
+    });
+
+    // Sort by soldCount descending, then trending items, then newest
+    mapped.sort((a, b) => {
+      if (b.soldCount !== a.soldCount) return b.soldCount - a.soldCount;
+      if (b.isTrending !== a.isTrending) return Number(b.isTrending) - Number(a.isTrending);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    const activeTrendingCount = mapped.filter((p) => p.isTrending).length;
+    const totalUnitsSold = mapped.reduce((sum, p) => sum + p.soldCount, 0);
+
+    return ok(res, {
+      products: mapped,
+      top10: mapped.slice(0, 10),
+      metrics: {
+        activeTrendingCount,
+        totalUnitsSold,
+        totalProducts: mapped.length,
+      },
+    });
+  });
+
+  // ── POST /admin/trending/toggle ────────────────────────────────────────
+  // Toggle a product's "Trending" status on the homepage
+  router.post('/admin/trending/toggle', async (req, res) => {
+    const { productId, isTrending } = req.body ?? {};
+    if (!productId || typeof productId !== 'string') {
+      throw httpError(400, 'productId is required.');
+    }
+    const trendingVal = Boolean(isTrending);
+
+    const { data: product, error: fetchErr } = await supabase.service
+      .from('products')
+      .select('id, name, verification_meta')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (fetchErr || !product) {
+      throw httpError(404, 'Product not found.');
+    }
+
+    const currentMeta = (product.verification_meta && typeof product.verification_meta === 'object')
+      ? product.verification_meta
+      : {};
+    const updatedMeta = { ...currentMeta, is_trending: trendingVal };
+
+    const { error: updateErr } = await supabase.service
+      .from('products')
+      .update({ verification_meta: updatedMeta, updated_at: new Date().toISOString() })
+      .eq('id', productId);
+
+    if (updateErr) {
+      // eslint-disable-next-line no-console
+      console.error('[admin/trending] update failed:', updateErr.message);
+      throw httpError(500, 'Unable to update trending status.');
+    }
+
+    await writeAudit(supabase, {
+      actorId: req.auth.profile.id,
+      actorRole: 'ADMIN',
+      action: trendingVal ? 'admin.product.trending_enabled' : 'admin.product.trending_disabled',
+      resourceType: 'product',
+      resourceId: productId,
+      ip: req.ip ?? null,
+      metadata: { isTrending: trendingVal, productName: product.name },
+    });
+
+    return ok(res, { success: true, productId, isTrending: trendingVal });
+  });
+
   return router;
 }
