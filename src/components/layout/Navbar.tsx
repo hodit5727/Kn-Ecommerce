@@ -142,14 +142,10 @@ export const Navbar: React.FC = () => {
       navigate('/products');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      navigate(`/home?category=${encodeURIComponent(categoryId)}`);
-      setTimeout(() => {
-        const el = document.getElementById('catalog-index');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 50);
+      navigate(`/products?category=${encodeURIComponent(categoryId)}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    setIsCategoryDropdownOpen(false);
   };
 
   const currentCategoryParam = searchParams.get('category');
@@ -284,8 +280,8 @@ export const Navbar: React.FC = () => {
                 {CATEGORY_NAV_ITEMS.map((item) => {
                   const IconComponent = item.icon;
                   const isSelected = item.id === 'Home'
-                    ? isHomeActive && !hasSpecificCategory
-                    : currentCategoryParam?.toLowerCase() === item.id.toLowerCase();
+                    ? isHomeActive
+                    : (location.pathname === '/products' && currentCategoryParam?.toLowerCase() === item.id.toLowerCase());
 
                   return (
                     <button
