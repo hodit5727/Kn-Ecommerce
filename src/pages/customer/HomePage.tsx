@@ -63,17 +63,14 @@ export const HomePage: React.FC = () => {
     }
   };
 
-  // Derive New Arrivals (Newest first, up to 8 products)
+  // Derive New Arrivals (Newest first, up to 10 products)
   const newArrivals = allProducts
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    .slice(0, 8);
+    .slice(0, 10);
 
-  // Derive Trending Products (explicitly toggled by Admin or top items)
-  const trendingFiltered = allProducts.filter((p) => p.isTrending);
-  const trendingProducts = trendingFiltered.length > 0
-    ? trendingFiltered.slice(0, 8)
-    : allProducts.slice(0, 8);
+  // Derive Trending Products: STRICTLY products explicitly approved/toggled by Admin (NO fallback to all products!)
+  const trendingApprovedProducts = allProducts.filter((p) => Boolean(p.isTrending));
 
   return (
     <div className="space-y-10 sm:space-y-16 pb-24">
@@ -268,8 +265,8 @@ export const HomePage: React.FC = () => {
           </div>
 
           {isLoading && allProducts.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
@@ -278,7 +275,7 @@ export const HomePage: React.FC = () => {
               No new arrivals found. Check back as campus artisans add new collections.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
               {newArrivals.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -290,44 +287,34 @@ export const HomePage: React.FC = () => {
           )}
         </section>
 
-        {/* ── TRENDING NOW SECTION (MANAGED BY ADMIN DASHBOARD) ──────── */}
-        <section className="space-y-6 bg-gradient-to-b from-orange-50/30 to-transparent p-4 sm:p-8 rounded-3xl border border-orange-100/80">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-orange-200/60 pb-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 border border-orange-200 text-[10px] font-bold uppercase tracking-widest text-orange-900 mb-1.5">
-                <Flame className="w-3 h-3 fill-orange-500 text-orange-600" />
-                <span>Curated & Most Coveted</span>
+        {/* ── TRENDING NOW SECTION: STRICTLY ADMIN APPROVED TOP 10 ITEMS ONLY ── */}
+        {trendingApprovedProducts.length > 0 && (
+          <section className="space-y-6 bg-gradient-to-b from-orange-50/30 to-transparent p-4 sm:p-6 rounded-3xl border border-orange-100/80 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-orange-200/60 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 border border-orange-200 text-[10px] font-bold uppercase tracking-widest text-orange-900 mb-1.5">
+                  <Flame className="w-3 h-3 fill-orange-500 text-orange-600" />
+                  <span>Curated & Most Coveted</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-serif font-extrabold text-stone-900 tracking-tight">
+                  Trending Now
+                </h2>
+                <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-xl">
+                  Top seller pieces and viral artisan signatures verified by administration for high customer acclaim.
+                </p>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-serif font-extrabold text-stone-900 tracking-tight">
-                Trending Now
-              </h2>
-              <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-xl">
-                Top seller pieces and viral artisan signatures verified by administration for high customer acclaim.
-              </p>
+
+              <Link
+                to="/products?sort=featured"
+                className="inline-flex items-center gap-1.5 text-xs font-serif font-bold text-orange-800 hover:text-orange-950 transition-colors self-start sm:self-auto group"
+              >
+                <span>View Full Gallery</span>
+                <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </Link>
             </div>
 
-            <Link
-              to="/products?sort=featured"
-              className="inline-flex items-center gap-1.5 text-xs font-serif font-bold text-orange-800 hover:text-orange-950 transition-colors self-start sm:self-auto group"
-            >
-              <span>View Full Gallery</span>
-              <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-          {isLoading && allProducts.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <ProductCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : trendingProducts.length === 0 ? (
-            <div className="py-12 text-center bg-white/60 rounded-2xl border border-orange-200/50 text-stone-500 text-xs">
-              Trending items will appear here as orders and admin curations are published.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-              {trendingProducts.map((product) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
+              {trendingApprovedProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -335,8 +322,8 @@ export const HomePage: React.FC = () => {
                 />
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* ── 3. WHITE-GLOVE COD PROTOCOL GUARANTEE ──────────────────── */}
         <section className="bg-stone-900 text-cream-100 rounded-3xl p-6 sm:p-10 border border-stone-800 shadow-xl overflow-hidden relative">
