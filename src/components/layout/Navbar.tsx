@@ -42,19 +42,6 @@ const CATEGORY_NAV_ITEMS = [
   { id: 'Mobiles', label: 'Mobiles', icon: Smartphone },
   { id: 'Electronics', label: 'Electronics', icon: Laptop },
   { id: 'Beauty', label: 'Beauty', icon: Sparkles },
-  { id: 'Books', label: 'Books', icon: BookOpen },
-];
-
-const ALL_CATEGORIES_MENU = [
-  { id: 'All', label: 'All Products / Full Catalog', icon: LayoutGrid },
-  { id: 'Timepieces', label: 'Watches & Timepieces', icon: Watch },
-  { id: 'Fashion', label: 'Fashion & Apparel', icon: Shirt },
-  { id: 'Mobiles', label: 'Mobiles & Tablets', icon: Smartphone },
-  { id: 'Electronics', label: 'Laptops & Computers', icon: Laptop },
-  { id: 'Beauty', label: 'Beauty & Personal Care', icon: Sparkles },
-  { id: 'Home & Kitchen', label: 'Home & Living', icon: UtensilsCrossed },
-  { id: 'Books', label: 'Books & Stationery', icon: BookOpen },
-  { id: 'Grocery & Beverages', label: 'Gourmet & Beverages', icon: Apple },
 ];
 
 export const Navbar: React.FC = () => {
@@ -63,7 +50,6 @@ export const Navbar: React.FC = () => {
   const { openCartDrawer, itemCount } = useCart();
   const { wishlistCount } = useWishlist();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -145,7 +131,6 @@ export const Navbar: React.FC = () => {
       navigate(`/products?category=${encodeURIComponent(categoryId)}`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    setIsCategoryDropdownOpen(false);
   };
 
   const currentCategoryParam = searchParams.get('category');
@@ -207,76 +192,8 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {/* Desktop Center Categories Navigation (Hidden on Mobile) */}
-            <div className="hidden md:flex flex-1 items-center justify-center px-4 overflow-x-auto scrollbar-none">
-              <div className="flex items-center gap-2 lg:gap-4 shrink-0">
-                {/* All Categories Dropdown Menu */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                    className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl border text-xs font-semibold transition-all focus:outline-none ${
-                      isCategoryDropdownOpen
-                        ? 'bg-burgundy text-white border-burgundy shadow-sm'
-                        : 'bg-cream-100/80 hover:bg-cream-200/80 border-cream-300 text-stone-800'
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>Categories</span>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                        isCategoryDropdownOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {/* Dropdown Menu Modal */}
-                  {isCategoryDropdownOpen && (
-                    <div
-                      className="absolute left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-cream-200 py-2 z-50 text-xs animate-fadeIn"
-                      onClick={() => setIsCategoryDropdownOpen(false)}
-                    >
-                      <div className="px-3.5 py-2 border-b border-cream-100 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
-                          Select Category
-                        </span>
-                        <span className="text-[9px] font-bold bg-cream-100 text-burgundy px-1.5 py-0.5 rounded">
-                          {ALL_CATEGORIES_MENU.length} Options
-                        </span>
-                      </div>
-                      <div className="max-h-72 overflow-y-auto py-1 divide-y divide-cream-50">
-                        {ALL_CATEGORIES_MENU.map((cat) => {
-                          const CatIcon = cat.icon;
-                          const isCatActive = cat.id === 'All'
-                            ? !hasSpecificCategory
-                            : currentCategoryParam?.toLowerCase() === cat.id.toLowerCase();
-                          return (
-                            <button
-                              key={cat.id}
-                              onClick={() => {
-                                handleCategorySelect(cat.id);
-                                setIsCategoryDropdownOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-cream-50 text-left transition-colors text-xs ${
-                                isCatActive ? 'bg-cream-100/70 font-bold text-burgundy' : 'text-stone-700'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-6 h-6 rounded-lg bg-cream-100 text-burgundy flex items-center justify-center shrink-0">
-                                  <CatIcon className="w-3.5 h-3.5" />
-                                </div>
-                                <span>{cat.label}</span>
-                              </div>
-                              {isCatActive && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-burgundy shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
+            <div className="hidden md:flex flex-1 items-center justify-center px-2 lg:px-4">
+              <div className="flex items-center gap-1 sm:gap-2 lg:gap-3.5 flex-nowrap">
                 {CATEGORY_NAV_ITEMS.map((item) => {
                   const IconComponent = item.icon;
                   const isSelected = item.id === 'Home'
@@ -287,26 +204,26 @@ export const Navbar: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => handleCategorySelect(item.id)}
-                      className="flex flex-col items-center gap-1 py-1 px-2 rounded-xl group transition-all shrink-0 relative focus:outline-none"
+                      className="flex flex-col items-center gap-0.5 py-1 px-1.5 sm:px-2.5 rounded-xl group transition-all shrink-0 relative focus:outline-none cursor-pointer"
                     >
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
                           isSelected
                             ? 'bg-burgundy text-white shadow-soft scale-105'
                             : 'bg-cream-100/80 text-stone-700 group-hover:bg-amber-100 group-hover:text-burgundy'
                         }`}
                       >
-                        <IconComponent className="w-4 h-4 transition-transform" />
+                        <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform" />
                       </div>
                       <span
-                        className={`text-[10px] font-semibold tracking-wide transition-colors ${
+                        className={`text-[9px] sm:text-[10px] font-semibold tracking-wide transition-colors ${
                           isSelected ? 'text-burgundy font-bold' : 'text-stone-600 group-hover:text-burgundy'
                         }`}
                       >
                         {item.label}
                       </span>
                       {isSelected && (
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-burgundy rounded-full shadow-xs" />
+                        <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-burgundy rounded-full shadow-xs" />
                       )}
                     </button>
                   );
