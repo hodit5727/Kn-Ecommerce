@@ -79,7 +79,7 @@ export const HomePage: React.FC = () => {
         {/* Background Texture & Wash */}
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center no-repeat pointer-events-none"
-          style={{ backgroundImage: "url('/hero-water-scene.jpg')" }}
+          style={{ backgroundImage: "url('/hero-water-scene.webp')" }}
         />
         <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#FAF7F2]/95 via-[#FAF7F2]/80 sm:via-[#FAF7F2]/60 to-transparent w-full lg:w-[55%] pointer-events-none" />
 
@@ -175,9 +175,16 @@ export const HomePage: React.FC = () => {
                 title="Inspect Timepieces"
               >
                 <img
-                  src="/hero-watch-8k.png"
+                  src="/hero-watch.webp"
+                  srcSet="/hero-watch-mobile.webp 380w, /hero-watch.webp 600w"
+                  sizes="(max-width: 640px) 176px, (max-width: 1024px) 224px, 256px"
+                  width={600}
+                  height={745}
+                  fetchPriority="high"
+                  loading="eager"
+                  decoding="async"
                   alt="Aethelgard Chronometre Tourbillon"
-                  className="w-44 sm:w-56 lg:w-64 drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
+                  className="w-44 sm:w-56 lg:w-64 h-auto drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
                 />
               </div>
 
@@ -190,18 +197,26 @@ export const HomePage: React.FC = () => {
                 {/* Floating Left Earbud (8K Rounded, Emerges from Inside Case) */}
                 <div className="absolute -top-10 sm:-top-14 -left-4 sm:-left-6 z-20 pointer-events-none">
                   <img
-                    src="/hero-bud-left-8k.png"
+                    src="/hero-bud-left.webp"
+                    width={140}
+                    height={172}
+                    loading="lazy"
+                    decoding="async"
                     alt="K-Shop Left Airbod (8K Rounded)"
-                    className="w-9 sm:w-13 lg:w-15 drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-left-8k"
+                    className="w-9 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-left-8k"
                   />
                 </div>
 
                 {/* Floating Right Earbud (8K Rounded, Emerges from Inside Case) */}
                 <div className="absolute -top-12 sm:-top-16 right-2 sm:right-3 z-20 pointer-events-none">
                   <img
-                    src="/hero-bud-right-8k.png"
+                    src="/hero-bud-right.webp"
+                    width={140}
+                    height={173}
+                    loading="lazy"
+                    decoding="async"
                     alt="K-Shop Right Airbod (8K Rounded)"
-                    className="w-9 sm:w-13 lg:w-15 drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-right-8k"
+                    className="w-9 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-right-8k"
                   />
                 </div>
 
@@ -209,13 +224,21 @@ export const HomePage: React.FC = () => {
                 <div className="relative w-28 sm:w-36 lg:w-44 h-24 sm:h-32 lg:h-38 flex items-center justify-center">
                   {/* Closed Case Image */}
                   <img
-                    src="/hero-case-closed-8k.png"
+                    src="/hero-case-closed.webp"
+                    width={380}
+                    height={326}
+                    loading="lazy"
+                    decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Closed)"
                     className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_32px_rgba(0,0,0,0.22)] animate-case-closed"
                   />
                   {/* Open Case Image */}
                   <img
-                    src="/hero-case-open-8k.png"
+                    src="/hero-case-open.webp"
+                    width={380}
+                    height={358}
+                    loading="lazy"
+                    decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Open)"
                     className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_32px_rgba(0,0,0,0.25)] animate-case-open"
                   />

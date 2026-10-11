@@ -136,7 +136,11 @@ export function createApp({ env, supabase, verification = null }) {
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        } else if (filePath.includes('/assets/') || filePath.includes('\\assets\\')) {
+        } else if (
+          filePath.includes('/assets/') ||
+          filePath.includes('\\assets\\') ||
+          /\.(webp|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|wasm)$/i.test(filePath)
+        ) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
       },
