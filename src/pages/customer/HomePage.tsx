@@ -180,10 +180,10 @@ export const HomePage: React.FC = () => {
               >
                 <img
                   src="/hero-watch.webp"
-                  srcSet="/hero-watch-mobile.webp 380w, /hero-watch.webp 600w"
+                  srcSet="/hero-watch-mobile.webp 300w, /hero-watch.webp 500w"
                   sizes="(max-width: 640px) 144px, (max-width: 1024px) 224px, 256px"
-                  width={600}
-                  height={745}
+                  width={500}
+                  height={620}
                   fetchPriority="high"
                   loading="eager"
                   decoding="async"
@@ -202,8 +202,8 @@ export const HomePage: React.FC = () => {
                 <div className="absolute -top-7 sm:-top-14 -left-3 sm:-left-6 z-20 pointer-events-none">
                   <img
                     src="/hero-bud-left.webp"
-                    width={140}
-                    height={172}
+                    width={100}
+                    height={122}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Left Airbod (8K Rounded)"
@@ -215,8 +215,8 @@ export const HomePage: React.FC = () => {
                 <div className="absolute -top-8 sm:-top-16 right-1 sm:right-3 z-20 pointer-events-none">
                   <img
                     src="/hero-bud-right.webp"
-                    width={140}
-                    height={173}
+                    width={100}
+                    height={123}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Right Airbod (8K Rounded)"
@@ -229,8 +229,8 @@ export const HomePage: React.FC = () => {
                   {/* Closed Case Image */}
                   <img
                     src="/hero-case-closed.webp"
-                    width={380}
-                    height={326}
+                    width={220}
+                    height={188}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Closed)"
@@ -239,8 +239,8 @@ export const HomePage: React.FC = () => {
                   {/* Open Case Image */}
                   <img
                     src="/hero-case-open.webp"
-                    width={380}
-                    height={358}
+                    width={220}
+                    height={207}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Open)"

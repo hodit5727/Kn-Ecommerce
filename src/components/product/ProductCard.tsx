@@ -7,6 +7,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import { useToast } from '../../context/ToastContext';
 import { Badge } from '../common/Badge';
 import { formatINR } from '../../lib/currency';
+import { getOptimizedImageUrl } from '../../lib/imageUrl';
 
 interface ProductCardProps {
   product: Product;
@@ -65,10 +66,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
       <div className="relative aspect-square max-h-[190px] w-full bg-stone-50/80 overflow-hidden flex items-center justify-center">
         <Link to={`/products/${product.id}`} className="block w-full h-full">
           <img
-            src={product.images[0]}
+            src={getOptimizedImageUrl(product.images[0], { width: 360, quality: 75 })}
             alt={product.name}
-            className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+            width={230}
+            height={190}
             loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (product.images[0] && target.src !== product.images[0]) {
+                target.src = product.images[0];
+              }
+            }}
+            className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </Link>
 
