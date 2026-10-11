@@ -209,7 +209,7 @@ export const ProductDetailPage: React.FC = () => {
       <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12" aria-busy="true" aria-label="Loading product details">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
           {/* Breadcrumb Skeleton */}
-          <div className="h-4 w-48 sm:w-64 bg-stone-200/80 rounded animate-pulse" />
+          <div className="h-5 w-48 sm:w-64 bg-stone-200/80 rounded animate-pulse my-0.5" />
 
           {/* 50/50 Grid Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 items-start">
@@ -402,7 +402,7 @@ export const ProductDetailPage: React.FC = () => {
 
                 {/* Rating Badge */}
                 <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFF9F2] border border-[#E8DCCF] text-[11px] font-semibold">
-                  <Star className="w-3 h-3 text-[#B8860B] fill-[#B8860B]" />
+                  <Star className="w-3 h-3 text-[#855A00] fill-[#855A00]" />
                   <span className="text-[#171717] font-bold">
                     {product.rating ? Number(product.rating).toFixed(1) : '5.0'}
                   </span>
@@ -586,8 +586,8 @@ export const ProductDetailPage: React.FC = () => {
                       <span className="text-[10px] uppercase font-bold text-[#4E453E] tracking-wider">
                         Seller
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#B8860B] bg-white border border-[#B8860B]/40 px-1.5 py-0.5 rounded-full">
-                        <ShieldCheck className="w-2.5 h-2.5 text-[#B8860B]" /> Verified
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#855A00] bg-white border border-[#855A00]/40 px-1.5 py-0.5 rounded-full">
+                        <ShieldCheck className="w-2.5 h-2.5 text-[#855A00]" /> Verified
                       </span>
                     </div>
                     <h4 className="font-serif font-bold text-[#171717] text-sm sm:text-base">
@@ -597,8 +597,8 @@ export const ProductDetailPage: React.FC = () => {
                       {product.sellerId && (
                         <span>ID: <strong className="text-[#171717] font-mono">{String(product.sellerId).slice(0, 8).toUpperCase()}</strong></span>
                       )}
-                      <span className="flex items-center gap-1 text-[#B8860B] font-semibold">
-                        <Star className="w-2.5 h-2.5 fill-[#B8860B]" /> {product.sellerRating ? Number(product.sellerRating).toFixed(1) : '5.0'}
+                      <span className="flex items-center gap-1 text-[#855A00] font-semibold">
+                        <Star className="w-2.5 h-2.5 fill-[#855A00]" /> {product.sellerRating ? Number(product.sellerRating).toFixed(1) : '5.0'}
                       </span>
                     </div>
                   </div>

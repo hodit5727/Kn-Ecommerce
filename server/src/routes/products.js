@@ -217,6 +217,7 @@ export function createProductsRouter({ env, supabase }) {
     const approved = await approvedSellerIds(supabase, [row.seller_id]);
     if (!isPubliclyVisible(row, approved)) throw httpError(404, 'Product not found.');
 
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     return ok(res, { product: productToPublic(row, imageBase) });
   });
 

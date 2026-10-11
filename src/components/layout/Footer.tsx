@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
               A high-precision multi-role marketplace engineered for discerning collectors, master ateliers,
               and sovereign governance. Built with White/Ivory aesthetic integrity and Deep Burgundy identity.
             </p>
-            <div className="pt-2 text-xs text-stone-400">
+            <div className="pt-2 text-xs text-stone-600">
               Operating under COD Settlement Standard ISO-9001-COD.
             </div>
           </div>
@@ -118,16 +118,16 @@ export const Footer: React.FC = () => {
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
               <li><Link to="/admin" className="hover:text-burgundy">Admin Control Tower</Link></li>
-              <li><span className="text-stone-400">Cash on Delivery Terms</span></li>
-              <li><span className="text-stone-400">Horological Authenticity</span></li>
-              <li><span className="text-stone-400">Privacy & Ledger Records</span></li>
+              <li><span className="text-stone-600">Cash on Delivery Terms</span></li>
+              <li><span className="text-stone-600">Horological Authenticity</span></li>
+              <li><span className="text-stone-600">Privacy & Ledger Records</span></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-cream-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-400">
+        <div className="mt-12 pt-8 border-t border-cream-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-600">
           <p>© 2026 K-Shop Sovereign Marketplace. All rights reserved.</p>
-          <p className="mt-2 sm:mt-0 font-medium text-stone-500">
+          <p className="mt-2 sm:mt-0 font-medium text-stone-600">
             White/Ivory Palette • Deep Burgundy Identity • Cash on Delivery Only
           </p>
         </div>
