@@ -171,14 +171,55 @@ export const HomePage: React.FC = () => {
               {/* Floating Tourbillon Watch */}
               <div 
                 onClick={() => handleCategoryClick('Timepieces')}
-                className="absolute left-6 sm:left-14 bottom-8 sm:bottom-12 z-20 cursor-pointer group select-none"
+                className="absolute left-4 sm:left-10 lg:left-12 bottom-6 sm:bottom-10 z-20 cursor-pointer group select-none"
                 title="Inspect Timepieces"
               >
                 <img
                   src="/hero-watch-8k.png"
                   alt="Aethelgard Chronometre Tourbillon"
-                  className="w-52 sm:w-64 lg:w-72 drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
+                  className="w-44 sm:w-56 lg:w-64 drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
                 />
+              </div>
+
+              {/* Single Floating AirPods Cluster: Case Closes/Opens & 2 Earbuds Emerge From Within */}
+              <div 
+                onClick={() => handleCategoryClick('Electronics')}
+                className="airpods-stage absolute right-4 sm:right-8 lg:right-10 top-4 sm:top-8 z-20 cursor-pointer group select-none"
+                title="K-Shop Sovereign Airbods - Emerge from Case"
+              >
+                {/* Floating Left Earbud (8K Rounded, Emerges from Inside Case) */}
+                <div className="absolute -top-10 sm:-top-14 -left-4 sm:-left-6 z-20 pointer-events-none">
+                  <img
+                    src="/hero-bud-left-8k.png"
+                    alt="K-Shop Left Airbod (8K Rounded)"
+                    className="w-9 sm:w-13 lg:w-15 drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-left-8k"
+                  />
+                </div>
+
+                {/* Floating Right Earbud (8K Rounded, Emerges from Inside Case) */}
+                <div className="absolute -top-12 sm:-top-16 right-2 sm:right-3 z-20 pointer-events-none">
+                  <img
+                    src="/hero-bud-right-8k.png"
+                    alt="K-Shop Right Airbod (8K Rounded)"
+                    className="w-9 sm:w-13 lg:w-15 drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-right-8k"
+                  />
+                </div>
+
+                {/* Dual Case Container: Closed State transitioning to Open State with Gold K-Shop Inscription */}
+                <div className="relative w-28 sm:w-36 lg:w-44 h-24 sm:h-32 lg:h-38 flex items-center justify-center">
+                  {/* Closed Case Image */}
+                  <img
+                    src="/hero-case-closed-8k.png"
+                    alt="K-Shop Sovereign Airbods Case (Closed)"
+                    className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_32px_rgba(0,0,0,0.22)] animate-case-closed"
+                  />
+                  {/* Open Case Image */}
+                  <img
+                    src="/hero-case-open-8k.png"
+                    alt="K-Shop Sovereign Airbods Case (Open)"
+                    className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_20px_32px_rgba(0,0,0,0.25)] animate-case-open"
+                  />
+                </div>
               </div>
 
               {/* COD Escrow Verified Badge */}
