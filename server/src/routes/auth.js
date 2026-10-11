@@ -79,7 +79,24 @@ export function createAuthRouter({ env, supabase }) {
     if (!isValidEmail(email)) throw httpError(400, 'Enter a valid email address.');
     if (!isValidOtp(otp)) throw httpError(400, 'Enter the 6-digit verification code.');
 
-    const { data, error } = await supabase.anon.auth.verifyOtp({ email, token: otp, type: 'email' });
+    let data = null;
+    let error = null;
+
+    const emailAttempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: 'email' });
+    if (!emailAttempt.error && emailAttempt.data?.user) {
+      data = emailAttempt.data;
+    } else {
+      // Supabase GoTrue distinguishes between existing user email OTP ('email')
+      // and new user registration OTP ('signup'). Fallback to 'signup' ensures
+      // brand new registrations verify successfully.
+      const signupAttempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: 'signup' });
+      if (!signupAttempt.error && signupAttempt.data?.user) {
+        data = signupAttempt.data;
+      } else {
+        error = emailAttempt.error || signupAttempt.error;
+      }
+    }
+
     if (error || !data?.user) {
       // eslint-disable-next-line no-console
       console.error('[auth/otp/verify] upstream error:', error?.code ?? '', error?.message ?? 'no user returned');

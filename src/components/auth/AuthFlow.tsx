@@ -259,7 +259,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         showToast('UI preview: OTP email not resent (backend not connected).');
       } else {
         const res = await sendOtp(email.trim());
-        showToast(res.message || 'OTP resent.');
+        showToast(res.message || 'New OTP sent! Please check your latest email.');
       }
       setResendCooldown(60);
       setOtp('');
@@ -273,9 +273,10 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
   // ── STEP 2: OTP ───────────────────────────────────────────────────────────
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) {
+    const cleanOtp = otp.trim().replace(/\D/g, '');
+    if (cleanOtp.length !== 6) {
       setFieldErrors({} as ProfileErrors);
-      setApiError('Please enter the 6-digit OTP sent to your phone.');
+      setApiError('Please enter the 6-digit OTP sent to your email.');
       return;
     }
     setIsSubmitting(true);
@@ -285,16 +286,21 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         await previewDelay();
         // Preview affordance: OTP 000000 = returning user path, anything
         // else = new user path (full 6-step onboarding).
-        setRequiresProfile(otp !== PREVIEW_RETURNING_OTP);
+        setRequiresProfile(cleanOtp !== PREVIEW_RETURNING_OTP);
       } else {
-        const res = await verifyOtp(email.trim(), otp);
+        const res = await verifyOtp(email.trim(), cleanOtp);
         setRequiresProfile(res.requiresProfile);
       }
       setPin('');
       setPinConfirm('');
       setStep(3);
     } catch (err) {
-      setApiError(errorMessage(err, 'Invalid OTP. Please try again.'));
+      setApiError(
+        errorMessage(
+          err,
+          'Invalid or expired verification code. If you requested a new code, please check your latest email.',
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -680,6 +686,15 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
                 setOtp(e.target.value.replace(/\D/g, ''));
                 clearApiError();
               }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pasteText = e.clipboardData.getData('text') || '';
+                const digits = pasteText.replace(/\D/g, '').slice(0, 6);
+                if (digits) {
+                  setOtp(digits);
+                  clearApiError();
+                }
+              }}
               className="w-full px-4 py-3 bg-white border-2 border-stone-200 rounded-xl text-center text-2xl tracking-[0.6em] font-mono text-stone-900 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
             />
           </div>
@@ -687,6 +702,10 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
           <Button type="submit" variant="primary" size="md" className="w-full" isLoading={isSubmitting}>
             Verify &amp; Continue
           </Button>
+
+          <p className="text-[11px] text-stone-500 text-center leading-relaxed">
+            Note: If you requested a new OTP, earlier codes are expired. Please enter the code from the most recent email in your inbox.
+          </p>
 
           <div className="flex items-center justify-center gap-3 text-xs">
             {resendCooldown > 0 ? (
@@ -875,6 +894,12 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
               value={forgotToken}
               onChange={(e) => {
                 setForgotToken(e.target.value.trim());
+                clearApiError();
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pasteText = (e.clipboardData.getData('text') || '').trim();
+                setForgotToken(pasteText.slice(0, 8));
                 clearApiError();
               }}
               className="w-full px-4 py-3 bg-white border-2 border-stone-200 rounded-xl text-center text-lg tracking-[0.4em] font-mono text-stone-900 placeholder-stone-300 placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
