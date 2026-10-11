@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
                 <Truck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-semibold text-stone-900 text-sm">Cash on Delivery Protocol</h4>
+                <p className="font-serif font-semibold text-stone-900 text-sm">Cash on Delivery Protocol</p>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                   Zero advance risk. Inspect the piece with our white-glove courier before settling cash payment.
                 </p>
@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-semibold text-stone-900 text-sm">Certified Provenance</h4>
+                <p className="font-serif font-semibold text-stone-900 text-sm">Certified Provenance</p>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                   Every horological piece and artisanal artifact undergoes master appraisal and provenance logging.
                 </p>
@@ -42,7 +42,7 @@ export const Footer: React.FC = () => {
                 <RotateCcw className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-semibold text-stone-900 text-sm">Concierge Refund Process</h4>
+                <p className="font-serif font-semibold text-stone-900 text-sm">Concierge Refund Process</p>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                   Formal dispute arbitration and wire return protocol managed under strict governance.
                 </p>
@@ -54,7 +54,7 @@ export const Footer: React.FC = () => {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-semibold text-stone-900 text-sm">RBAC Sovereign Security</h4>
+                <p className="font-serif font-semibold text-stone-900 text-sm">RBAC Sovereign Security</p>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                   Multi-tier enterprise authentication with OTP and cryptographic PIN validation.
                 </p>
@@ -87,9 +87,9 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h5 className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
+            <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
               The Collection
-            </h5>
+            </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
               <li><Link to="/products?category=Timepieces" className="hover:text-burgundy">Haute Horlogerie</Link></li>
               <li><Link to="/products?category=Furniture%20%26%20Decor" className="hover:text-burgundy">Architectural Seating</Link></li>
@@ -100,9 +100,9 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h5 className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
+            <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
               Atelier & Commerce
-            </h5>
+            </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
               <li><Link to="/become-seller" className="hover:text-burgundy">Become an Accredited Seller</Link></li>
               <li><Link to="/seller" className="hover:text-burgundy">Seller Portal</Link></li>
@@ -113,9 +113,9 @@ export const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h5 className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
+            <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
               Governance
-            </h5>
+            </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
               <li><Link to="/admin" className="hover:text-burgundy">Admin Control Tower</Link></li>
               <li><span className="text-stone-400">Cash on Delivery Terms</span></li>

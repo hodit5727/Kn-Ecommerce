@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productService } from '../../services/productService';
 import { Product } from '../../types/product';
-import { Product3DViewer } from '../../components/3d/Product3DViewer';
-import { InteriorVisualizerModal } from '../../components/3d/InteriorVisualizerModal';
 import { ErrorState } from '../../components/common/ErrorState';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useToast } from '../../context/ToastContext';
 import { formatINR } from '../../lib/currency';
+import { getOptimizedImageUrl } from '../../lib/imageUrl';
+
+// Lazy-load Three.js components to avoid bundling 116 KiB vendor-three into the critical product path
+const Product3DViewer = lazy(() =>
+  import('../../components/3d/Product3DViewer').then((m) => ({ default: m.Product3DViewer }))
+);
+const InteriorVisualizerModal = lazy(() =>
+  import('../../components/3d/InteriorVisualizerModal').then((m) => ({ default: m.InteriorVisualizerModal }))
+);
 import {
   Heart,
   ShoppingBag,
@@ -199,10 +206,34 @@ export const ProductDetailPage: React.FC = () => {
 
   if (isLoading || !product) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-full border-4 border-[#8F0025] border-t-transparent animate-spin mx-auto" />
-          <p className="font-serif font-semibold text-[#171717]">Loading Product Details...</p>
+      <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12" aria-busy="true" aria-label="Loading product details">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
+          {/* Breadcrumb Skeleton */}
+          <div className="h-4 w-48 sm:w-64 bg-stone-200/80 rounded animate-pulse" />
+
+          {/* 50/50 Grid Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 items-start">
+            {/* Left Column (Image Stage) */}
+            <div className="space-y-3">
+              <div className="aspect-square w-full rounded-2xl bg-stone-200/70 border border-[#E8DCCF] animate-pulse" />
+              <div className="h-11 w-full rounded-xl bg-stone-200/60 animate-pulse" />
+            </div>
+
+            {/* Right Column (Product Information) */}
+            <div className="bg-white rounded-2xl p-5 sm:p-6 lg:p-7 border border-[#E8DCCF] shadow-xs space-y-5">
+              <div className="space-y-2">
+                <div className="h-3.5 w-24 bg-stone-200 rounded animate-pulse" />
+                <div className="h-8 w-4/5 bg-stone-200 rounded animate-pulse" />
+                <div className="h-4 w-3/5 bg-stone-200/70 rounded animate-pulse" />
+              </div>
+              <div className="h-20 w-full rounded-xl bg-[#FFF9F2] border border-[#E8DCCF] animate-pulse" />
+              <div className="h-12 w-full rounded-xl bg-stone-100 animate-pulse" />
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="h-12 rounded-xl bg-stone-200 animate-pulse" />
+                <div className="h-12 rounded-xl bg-[#8F0025]/30 animate-pulse" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -214,7 +245,7 @@ export const ProductDetailPage: React.FC = () => {
     <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
         {/* Breadcrumb Navigation */}
-        <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[#6B625C] overflow-x-auto whitespace-nowrap scrollbar-none py-1">
+        <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[#4E453E] overflow-x-auto whitespace-nowrap scrollbar-none py-1">
           <Link to="/" className="hover:text-[#8F0025] transition-colors shrink-0">Home</Link>
           <ChevronRight className="w-3 h-3 text-[#E8DCCF] shrink-0" />
           <Link to="/products" className="hover:text-[#8F0025] transition-colors shrink-0">Catalog</Link>
@@ -238,11 +269,26 @@ export const ProductDetailPage: React.FC = () => {
           <div className="space-y-3 lg:sticky lg:top-6">
             <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-2xs">
               {activeMediaTab === '3d' ? (
-                <Product3DViewer product={product} className="w-full h-full" autoRotate={true} />
+                <Suspense
+                  fallback={
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#FFF9F2]/50 gap-2">
+                      <div className="w-8 h-8 rounded-full border-2 border-[#8F0025] border-t-transparent animate-spin" />
+                      <span className="text-xs text-[#4E453E] font-semibold">Loading 3D Visualizer...</span>
+                    </div>
+                  }
+                >
+                  <Product3DViewer product={product} className="w-full h-full" autoRotate={true} />
+                </Suspense>
               ) : (
                 <img
-                  src={primaryImage}
+                  src={getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })}
+                  srcSet={`${getOptimizedImageUrl(primaryImage, { width: 400, quality: 80 })} 400w, ${getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })} 800w, ${getOptimizedImageUrl(primaryImage, { width: 1200, quality: 85 })} 1200w`}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
                   alt={product.name}
+                  width={600}
+                  height={600}
+                  fetchPriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               )}
@@ -262,7 +308,7 @@ export const ProductDetailPage: React.FC = () => {
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                     activeMediaTab === 'photo'
                       ? 'bg-[#8F0025] text-white shadow-xs'
-                      : 'text-[#6B625C] hover:bg-[#FFF9F2]'
+                      : 'text-[#4E453E] hover:bg-[#FFF9F2]'
                   }`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" /> Photos
@@ -273,7 +319,7 @@ export const ProductDetailPage: React.FC = () => {
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                     activeMediaTab === '3d'
                       ? 'bg-[#8F0025] text-white shadow-xs'
-                      : 'text-[#6B625C] hover:bg-[#FFF9F2]'
+                      : 'text-[#4E453E] hover:bg-[#FFF9F2]'
                   }`}
                 >
                   <Box className="w-3.5 h-3.5" /> 3D View
@@ -305,7 +351,15 @@ export const ProductDetailPage: React.FC = () => {
                         : 'border-[#E8DCCF] opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={getOptimizedImageUrl(img, { width: 128, height: 128, quality: 75 })}
+                      alt=""
+                      width={64}
+                      height={64}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -315,7 +369,7 @@ export const ProductDetailPage: React.FC = () => {
             <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white border border-[#E8DCCF] shadow-xs text-xs">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${currentStock <= 5 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-                <span className="text-[#6B625C] font-semibold">Campus Stock:</span>
+                <span className="text-[#4E453E] font-semibold">Campus Stock:</span>
               </div>
               <span className={`font-bold ${currentStock <= 5 ? 'text-amber-800' : 'text-emerald-700'}`}>
                 {currentStock > 0
@@ -340,7 +394,7 @@ export const ProductDetailPage: React.FC = () => {
                     <span className="text-[#E8DCCF]">•</span>
                   )}
                   {product.category && (
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B625C]">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#4E453E]">
                       {product.category}
                     </span>
                   )}
@@ -352,7 +406,7 @@ export const ProductDetailPage: React.FC = () => {
                   <span className="text-[#171717] font-bold">
                     {product.rating ? Number(product.rating).toFixed(1) : '5.0'}
                   </span>
-                  <span className="text-[#6B625C]">({product.reviewCount || 0})</span>
+                  <span className="text-[#4E453E]">({product.reviewCount || 0})</span>
                 </div>
               </div>
 
@@ -362,7 +416,7 @@ export const ProductDetailPage: React.FC = () => {
               </h1>
 
               {product.tagline && product.tagline !== product.name && (
-                <p className="text-xs text-[#6B625C] mt-1 font-medium">
+                <p className="text-xs text-[#4E453E] mt-1 font-medium">
                   {product.tagline}
                 </p>
               )}
@@ -376,7 +430,7 @@ export const ProductDetailPage: React.FC = () => {
                 </span>
                 {product.originalPrice && product.originalPrice > currentPrice && (
                   <>
-                    <span className="text-xs sm:text-sm text-[#6B625C] line-through">
+                    <span className="text-xs sm:text-sm text-[#4E453E] line-through">
                       {formatINR(product.originalPrice)}
                     </span>
                     <span className="text-[10px] font-bold bg-[#8F0025]/10 text-[#8F0025] px-2 py-0.5 rounded-full border border-[#8F0025]/20">
@@ -387,7 +441,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-[#E8DCCF] flex items-center justify-between text-xs flex-wrap gap-2">
-                <span className="text-[#6B625C] font-semibold uppercase tracking-wider text-[10px]">
+                <span className="text-[#4E453E] font-semibold uppercase tracking-wider text-[10px]">
                   Payment Protocol:
                 </span>
                 <span className="font-bold text-[#8F0025] flex items-center gap-1 text-xs">
@@ -400,7 +454,7 @@ export const ProductDetailPage: React.FC = () => {
             {variants.length > 1 && (
               <div className="space-y-2 p-3.5 rounded-xl bg-[#FFF9F2]/70 border border-[#E8DCCF]">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#6B625C] uppercase tracking-wider text-[10px]">
+                  <span className="font-bold text-[#4E453E] uppercase tracking-wider text-[10px]">
                     Available Options / Colors:
                   </span>
                   <span className="font-bold text-[#8F0025]">
@@ -444,7 +498,7 @@ export const ProductDetailPage: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#6B625C]">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#4E453E]">
                     Quantity:
                   </span>
                   <div className="flex items-center border border-[#E8DCCF] rounded-lg bg-white shadow-xs">
@@ -515,7 +569,7 @@ export const ProductDetailPage: React.FC = () => {
                     : 'border-[#E8DCCF] bg-white text-[#171717] hover:bg-[#FFF9F2]'
                 }`}
               >
-                <Heart className={`w-3.5 h-3.5 ${inWishlist ? 'fill-[#8F0025] text-[#8F0025]' : 'text-[#6B625C]'}`} />
+                <Heart className={`w-3.5 h-3.5 ${inWishlist ? 'fill-[#8F0025] text-[#8F0025]' : 'text-[#4E453E]'}`} />
                 <span>{inWishlist ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
               </button>
             </div>
@@ -529,7 +583,7 @@ export const ProductDetailPage: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] uppercase font-bold text-[#6B625C] tracking-wider">
+                      <span className="text-[10px] uppercase font-bold text-[#4E453E] tracking-wider">
                         Seller
                       </span>
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#B8860B] bg-white border border-[#B8860B]/40 px-1.5 py-0.5 rounded-full">
@@ -539,7 +593,7 @@ export const ProductDetailPage: React.FC = () => {
                     <h4 className="font-serif font-bold text-[#171717] text-sm sm:text-base">
                       {product.sellerName || 'Campus Partner Seller'}
                     </h4>
-                    <div className="flex items-center gap-2 text-[11px] text-[#6B625C] mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-2 text-[11px] text-[#4E453E] mt-0.5 flex-wrap">
                       {product.sellerId && (
                         <span>ID: <strong className="text-[#171717] font-mono">{String(product.sellerId).slice(0, 8).toUpperCase()}</strong></span>
                       )}
@@ -563,7 +617,7 @@ export const ProductDetailPage: React.FC = () => {
             </div>
 
             {/* Delivery & Return Protocols */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#6B625C]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#4E453E]">
               <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF]">
                 <Truck className="w-3.5 h-3.5 text-[#8F0025] shrink-0" />
                 <span>
@@ -592,7 +646,7 @@ export const ProductDetailPage: React.FC = () => {
               </h2>
             </div>
             {product.category && (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#FFF9F2] text-[#6B625C] border border-[#E8DCCF]">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#FFF9F2] text-[#4E453E] border border-[#E8DCCF]">
                 {product.category}
               </span>
             )}
@@ -626,7 +680,7 @@ export const ProductDetailPage: React.FC = () => {
           {/* Dynamic Key Features */}
           {dynamicFeatures.length > 0 && (
             <div className="pt-4 border-t border-[#E8DCCF] space-y-2.5">
-              <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#6B625C]">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#4E453E]">
                 Key Features
               </h3>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -664,10 +718,10 @@ export const ProductDetailPage: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-[#FFF9F2] border-b border-[#E8DCCF]">
-                      <th className="py-2.5 sm:py-3 px-3.5 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-[#6B625C] w-2/5 sm:w-1/3 border-r border-[#E8DCCF]">
+                      <th className="py-2.5 sm:py-3 px-3.5 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-[#4E453E] w-2/5 sm:w-1/3 border-r border-[#E8DCCF]">
                         Specification Parameter
                       </th>
-                      <th className="py-2.5 sm:py-3 px-3.5 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-[#6B625C]">
+                      <th className="py-2.5 sm:py-3 px-3.5 sm:px-4 text-[11px] font-bold uppercase tracking-wider text-[#4E453E]">
                         Details
                       </th>
                     </tr>
@@ -693,12 +747,16 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Spatial Visualizer Modal */}
-        <InteriorVisualizerModal
-          isOpen={isInteriorModalOpen}
-          onClose={() => setIsInteriorModalOpen(false)}
-          product={product}
-        />
+        {/* Spatial Visualizer Modal (Lazy-Loaded) */}
+        {isInteriorModalOpen && (
+          <Suspense fallback={null}>
+            <InteriorVisualizerModal
+              isOpen={isInteriorModalOpen}
+              onClose={() => setIsInteriorModalOpen(false)}
+              product={product}
+            />
+          </Suspense>
+        )}
       </div>
 
       {/* ── MOBILE BOTTOM STICKY ACTION BAR ── */}
@@ -706,7 +764,7 @@ export const ProductDetailPage: React.FC = () => {
         className="fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-cream-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:hidden p-3 flex items-center justify-between gap-3"
       >
         <div className="shrink-0">
-          <span className="text-[10px] uppercase font-bold text-[#6B625C] block leading-tight">
+          <span className="text-[10px] uppercase font-bold text-[#4E453E] block leading-tight">
             Total Price
           </span>
           <span className="text-xl font-serif font-bold text-[#171717] leading-none">

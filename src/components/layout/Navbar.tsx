@@ -297,7 +297,7 @@ export const Navbar: React.FC = () => {
                     <div className="px-4 py-2 border-b border-cream-200 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Bell className="w-4 h-4 text-burgundy" />
-                        <h4 className="font-serif font-bold text-stone-900 text-sm">Notices</h4>
+                        <p className="font-serif font-bold text-stone-900 text-sm">Notices</p>
                       </div>
                       {unreadAnnouncements > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-burgundy/10 text-burgundy font-bold">
