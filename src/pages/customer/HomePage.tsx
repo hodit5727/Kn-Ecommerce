@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { productService } from '../../services/productService';
 import { Product } from '../../types/product';
 import { ProductCard } from '../../components/product/ProductCard';
-import { QuickViewModal } from '../../components/product/QuickViewModal';
+const QuickViewModal = React.lazy(() => import('../../components/product/QuickViewModal').then(m => ({ default: m.QuickViewModal })));
 import { ProductCardSkeleton } from '../../components/common/Skeleton';
 import {
   ArrowRight,
@@ -180,7 +180,7 @@ export const HomePage: React.FC = () => {
               >
                 <img
                   src="/hero-watch.webp"
-                  srcSet="/hero-watch-mobile.webp 300w, /hero-watch.webp 500w"
+                  srcSet="/hero-watch-mobile.webp 250w, /hero-watch.webp 500w"
                   sizes="(max-width: 640px) 144px, (max-width: 1024px) 224px, 256px"
                   width={500}
                   height={620}
@@ -229,8 +229,8 @@ export const HomePage: React.FC = () => {
                   {/* Closed Case Image */}
                   <img
                     src="/hero-case-closed.webp"
-                    width={220}
-                    height={188}
+                    width={150}
+                    height={128}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Closed)"
@@ -239,8 +239,8 @@ export const HomePage: React.FC = () => {
                   {/* Open Case Image */}
                   <img
                     src="/hero-case-open.webp"
-                    width={220}
-                    height={207}
+                    width={150}
+                    height={141}
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Sovereign Airbods Case (Open)"
@@ -435,12 +435,16 @@ export const HomePage: React.FC = () => {
         </section>
       </div>
 
-      {/* Quick View Modal */}
-      <QuickViewModal
-        isOpen={!!selectedQuickViewProduct}
-        onClose={() => setSelectedQuickViewProduct(null)}
-        product={selectedQuickViewProduct}
-      />
+      {/* Quick View Modal (Mounted on demand only) */}
+      {selectedQuickViewProduct && (
+        <React.Suspense fallback={null}>
+          <QuickViewModal
+            isOpen={true}
+            onClose={() => setSelectedQuickViewProduct(null)}
+            product={selectedQuickViewProduct}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 };

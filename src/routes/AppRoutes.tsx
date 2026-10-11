@@ -2,10 +2,12 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../rbac/RoleGuard';
 
-// Layouts
+// Customer Layout (Eager)
 import { CustomerLayout } from '../components/layout/CustomerLayout';
-import { SellerLayout } from '../components/layout/SellerLayout';
-import { AdminLayout } from '../components/layout/AdminLayout';
+
+// Administrative & Seller Layouts (Lazy loaded on demand)
+const SellerLayout = lazy(() => import('../components/layout/SellerLayout').then(m => ({ default: m.SellerLayout })));
+const AdminLayout = lazy(() => import('../components/layout/AdminLayout').then(m => ({ default: m.AdminLayout })));
 
 // Core Storefront Page (Eagerly loaded for instant first paint)
 import { HomePage } from '../pages/customer/HomePage';

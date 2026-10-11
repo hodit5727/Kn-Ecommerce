@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Modal } from '../common/Modal';
 import { Product } from '../../types/product';
-import { Product3DViewer } from '../3d/Product3DViewer';
+const Product3DViewer = lazy(() => import('../3d/Product3DViewer').then(m => ({ default: m.Product3DViewer })));
 import { Button } from '../common/Button';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -44,7 +44,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ isOpen, onClose,
         <div className="space-y-3">
           <div className="relative rounded-2xl overflow-hidden bg-stone-50 border border-cream-200 aspect-square">
             {viewMode === '3d' ? (
-              <Product3DViewer product={product} className="h-full w-full" />
+              <Suspense fallback={<div className="h-full w-full flex items-center justify-center text-xs text-stone-400">Loading 3D asset...</div>}>
+                <Product3DViewer product={product} className="h-full w-full" />
+              </Suspense>
             ) : (
               <img
                 src={product.images[activeImageIndex] || product.images[0]}
