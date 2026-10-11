@@ -7,14 +7,16 @@ import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { SellerLayout } from '../components/layout/SellerLayout';
 import { AdminLayout } from '../components/layout/AdminLayout';
 
-// Core Storefront Pages (Eagerly loaded for instant first paint)
+// Core Storefront Page (Eagerly loaded for instant first paint)
 import { HomePage } from '../pages/customer/HomePage';
-import { ProductsPage } from '../pages/customer/ProductsPage';
-import { ProductDetailPage } from '../pages/customer/ProductDetailPage';
-import { CartPage } from '../pages/customer/CartPage';
-import { CheckoutPage } from '../pages/customer/CheckoutPage';
-import { OrdersPage } from '../pages/customer/OrdersPage';
-import { LoginPage } from '../pages/auth/LoginPage';
+
+// Storefront Secondary & Conversion Pages (Lazy loaded on demand)
+const ProductsPage = lazy(() => import('../pages/customer/ProductsPage').then(m => ({ default: m.ProductsPage })));
+const ProductDetailPage = lazy(() => import('../pages/customer/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
+const CartPage = lazy(() => import('../pages/customer/CartPage').then(m => ({ default: m.CartPage })));
+const CheckoutPage = lazy(() => import('../pages/customer/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
+const OrdersPage = lazy(() => import('../pages/customer/OrdersPage').then(m => ({ default: m.OrdersPage })));
+const LoginPage = lazy(() => import('../pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 
 // Customer Secondary Pages (Lazy loaded on demand)
 const OrderDetailPage = lazy(() => import('../pages/customer/OrderDetailPage').then(m => ({ default: m.OrderDetailPage })));

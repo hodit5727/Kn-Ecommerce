@@ -167,7 +167,7 @@ export const HomePage: React.FC = () => {
                   <span>CERTIFIED HOROLOGY</span>
                   <Sparkles className="w-3 h-3 text-burgundy" />
                 </div>
-                <h4 className="font-serif font-bold text-stone-900 text-xs tracking-wide">Authenticated Pieces</h4>
+                <p className="font-serif font-bold text-stone-900 text-xs tracking-wide">Authenticated Pieces</p>
                 <div className="text-[10px] font-semibold text-burgundy mt-0.5">Expert-Verified Authenticity</div>
                 <p className="text-[10px] text-stone-500 mt-0.5 leading-tight">Independent Hallmark Inspection</p>
               </div>
@@ -255,7 +255,7 @@ export const HomePage: React.FC = () => {
                   <span>COD ESCROW</span>
                   <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
                 </div>
-                <h4 className="font-serif font-bold text-white text-[11px] sm:text-xs">ZERO ADVANCE</h4>
+                <p className="font-serif font-bold text-white text-[11px] sm:text-xs">ZERO ADVANCE</p>
                 <p className="text-[9px] sm:text-[10px] text-cream-200/90 leading-tight">Pay upon handover</p>
               </div>
             </div>
@@ -401,8 +401,8 @@ export const HomePage: React.FC = () => {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-bold text-white text-sm">100% Cash on Delivery</h4>
-                <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+                <h3 className="font-serif font-bold text-white text-sm">100% Cash on Delivery</h3>
+                <p className="text-xs text-stone-300 mt-1 leading-relaxed">
                   Zero advance payment required. Inspect your order in person before handing cash to the courier.
                 </p>
               </div>
@@ -413,8 +413,8 @@ export const HomePage: React.FC = () => {
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-bold text-white text-sm">Verified Artisans</h4>
-                <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+                <h3 className="font-serif font-bold text-white text-sm">Verified Artisans</h3>
+                <p className="text-xs text-stone-300 mt-1 leading-relaxed">
                   Every seller is identity-verified via college credentials and biometric authentication.
                 </p>
               </div>
@@ -425,8 +425,8 @@ export const HomePage: React.FC = () => {
                 <Lock className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-serif font-bold text-white text-sm">7-Day Escrow Protection</h4>
-                <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+                <h3 className="font-serif font-bold text-white text-sm">7-Day Escrow Protection</h3>
+                <p className="text-xs text-stone-300 mt-1 leading-relaxed">
                   Funds remain in administrative escrow for 7 days ensuring immediate return and refund coverage.
                 </p>
               </div>
