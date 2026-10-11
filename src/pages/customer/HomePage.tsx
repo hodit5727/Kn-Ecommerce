@@ -75,11 +75,15 @@ export const HomePage: React.FC = () => {
   return (
     <div className="space-y-10 sm:space-y-16 pb-24">
       {/* ── 1. SOVEREIGN LUXURY HERO SECTION ───────────────────────────────── */}
-      <section className="relative w-full overflow-hidden bg-[#FAF7F2] border-b border-cream-200/80 min-h-auto py-8 sm:py-12 lg:py-16 flex items-center">
-        {/* Background Texture & Wash */}
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center no-repeat pointer-events-none"
-          style={{ backgroundImage: "url('/hero-water-scene.webp')" }}
+      <section className="relative w-full overflow-hidden bg-[#FAF7F2] border-b border-cream-200/80 min-h-auto py-5 sm:py-10 lg:py-16 flex items-center">
+        {/* Background Texture & Wash - Native high-priority image for optimal LCP discovery */}
+        <img
+          src="/hero-water-scene.webp"
+          alt=""
+          role="presentation"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none z-0"
         />
         <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#FAF7F2]/95 via-[#FAF7F2]/80 sm:via-[#FAF7F2]/60 to-transparent w-full lg:w-[55%] pointer-events-none" />
 
@@ -94,22 +98,22 @@ export const HomePage: React.FC = () => {
 
         {/* Main Content Container */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 lg:gap-12 items-center">
             
             {/* Left Narrative Column */}
-            <div className="lg:col-span-6 space-y-4 sm:space-y-5 max-w-xl">
+            <div className="lg:col-span-6 space-y-2.5 sm:space-y-5 max-w-xl">
               <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-stone-600 font-serif font-semibold select-none">
                 CURATE &nbsp;×&nbsp; COLLECT &nbsp;×&nbsp; CHERISH
               </div>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs border border-stone-300/80 text-[11px] font-semibold text-stone-800 shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs border border-stone-300/80 text-[10px] sm:text-[11px] font-semibold text-stone-800 shadow-2xs">
                 <Sparkles className="w-3.5 h-3.5 text-burgundy" />
                 <span>Campus Artisanal Marketplace • 100% COD Protocol</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-[50px] font-serif font-extrabold text-stone-900 tracking-tight leading-[1.12]">
-                MASTERPIECES OF <br />
-                <span className="text-burgundy italic font-serif">Enduring</span> <br />
+              <h1 className="text-2xl sm:text-4xl lg:text-[50px] font-serif font-extrabold text-stone-900 tracking-tight leading-[1.14]">
+                MASTERPIECES OF <br className="hidden sm:inline" />
+                <span className="text-burgundy italic font-serif">Enduring</span> <br className="hidden sm:inline" />
                 PROVENANCE.
               </h1>
 
@@ -118,15 +122,15 @@ export const HomePage: React.FC = () => {
                 Inspect each piece upon delivery and pay with 100% Cash on Delivery.
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-4 pt-1 max-w-md">
+              {/* Action Buttons: Compact Row Layout on Mobile */}
+              <div className="flex flex-row items-center gap-2 sm:gap-4 pt-0.5 sm:pt-1 max-w-md">
                 <button
                   type="button"
                   onClick={() => handleCategoryClick('Timepieces')}
-                  className="inline-flex items-center justify-center gap-2 bg-burgundy hover:bg-burgundy-800 active:scale-[0.98] text-white font-serif font-semibold text-xs sm:text-sm px-6 py-3 rounded-xl shadow-soft hover:shadow-md transition-all min-h-[44px] cursor-pointer select-none"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-burgundy hover:bg-burgundy-800 active:scale-[0.98] text-white font-serif font-semibold text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-soft hover:shadow-md transition-all min-h-[42px] cursor-pointer select-none"
                 >
                   <span>Explore Watches</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
 
                 <button
@@ -135,28 +139,28 @@ export const HomePage: React.FC = () => {
                     const el = document.getElementById('new-arrivals');
                     if (el) el.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 bg-white/95 hover:bg-white active:scale-[0.98] text-stone-800 border border-stone-300 font-serif font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-2xs hover:shadow-soft transition-all min-h-[44px] cursor-pointer select-none"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 sm:gap-1.5 bg-white/95 hover:bg-white active:scale-[0.98] text-stone-800 border border-stone-300 font-serif font-semibold text-xs sm:text-sm px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl shadow-2xs hover:shadow-soft transition-all min-h-[42px] cursor-pointer select-none"
                 >
                   <span>New Arrivals ↓</span>
-                  <ChevronDown className="w-4 h-4 text-burgundy" />
+                  <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-burgundy" />
                 </button>
               </div>
 
               {/* Trust Badges */}
-              <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
-                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
-                  <ShieldCheck className="w-4 h-4 text-burgundy shrink-0" />
-                  <span className="text-[11px] font-semibold text-stone-800 leading-tight">100% Cash on Delivery</span>
+              <div className="grid grid-cols-2 gap-2 pt-0.5 sm:pt-1 text-xs">
+                <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-burgundy shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-stone-800 leading-tight">100% Cash on Delivery</span>
                 </div>
-                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
-                  <Truck className="w-4 h-4 text-burgundy shrink-0" />
-                  <span className="text-[11px] font-semibold text-stone-800 leading-tight">White-Glove Courier</span>
+                <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-xl bg-white/80 border border-cream-200/80 shadow-2xs">
+                  <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-burgundy shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-stone-800 leading-tight">White-Glove Courier</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Showcase Column */}
-            <div className="lg:col-span-6 relative h-[250px] sm:h-[360px] lg:h-[500px] flex items-center justify-center">
+            {/* Right Showcase Column: Proportional Height on Mobile */}
+            <div className="lg:col-span-6 relative h-[190px] sm:h-[340px] lg:h-[500px] flex items-center justify-center">
               {/* Certified Horology Badge */}
               <div className="hidden sm:block absolute top-2 sm:top-6 left-2 sm:left-6 z-30 bg-white/95 backdrop-blur-md px-4 py-3 rounded-2xl border border-cream-200 shadow-soft max-w-[210px] animate-float-case">
                 <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-burgundy mb-1">
@@ -171,31 +175,31 @@ export const HomePage: React.FC = () => {
               {/* Floating Tourbillon Watch */}
               <div 
                 onClick={() => handleCategoryClick('Timepieces')}
-                className="absolute left-4 sm:left-10 lg:left-12 bottom-6 sm:bottom-10 z-20 cursor-pointer group select-none"
+                className="absolute left-2 sm:left-10 lg:left-12 bottom-2 sm:bottom-10 z-20 cursor-pointer group select-none"
                 title="Inspect Timepieces"
               >
                 <img
                   src="/hero-watch.webp"
                   srcSet="/hero-watch-mobile.webp 380w, /hero-watch.webp 600w"
-                  sizes="(max-width: 640px) 176px, (max-width: 1024px) 224px, 256px"
+                  sizes="(max-width: 640px) 144px, (max-width: 1024px) 224px, 256px"
                   width={600}
                   height={745}
                   fetchPriority="high"
                   loading="eager"
                   decoding="async"
                   alt="Aethelgard Chronometre Tourbillon"
-                  className="w-44 sm:w-56 lg:w-64 h-auto drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
+                  className="w-36 sm:w-56 lg:w-64 h-auto drop-shadow-[0_28px_42px_rgba(0,0,0,0.36)] animate-float-watch-8k group-hover:scale-105 transition-transform duration-500 select-none"
                 />
               </div>
 
               {/* Single Floating AirPods Cluster: Case Closes/Opens & 2 Earbuds Emerge From Within */}
               <div 
                 onClick={() => handleCategoryClick('Electronics')}
-                className="airpods-stage absolute right-4 sm:right-8 lg:right-10 top-4 sm:top-8 z-20 cursor-pointer group select-none"
+                className="airpods-stage absolute right-2 sm:right-8 lg:right-10 top-2 sm:top-8 z-20 cursor-pointer group select-none"
                 title="K-Shop Sovereign Airbods - Emerge from Case"
               >
                 {/* Floating Left Earbud (8K Rounded, Emerges from Inside Case) */}
-                <div className="absolute -top-10 sm:-top-14 -left-4 sm:-left-6 z-20 pointer-events-none">
+                <div className="absolute -top-7 sm:-top-14 -left-3 sm:-left-6 z-20 pointer-events-none">
                   <img
                     src="/hero-bud-left.webp"
                     width={140}
@@ -203,12 +207,12 @@ export const HomePage: React.FC = () => {
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Left Airbod (8K Rounded)"
-                    className="w-9 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-left-8k"
+                    className="w-8 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-left-8k"
                   />
                 </div>
 
                 {/* Floating Right Earbud (8K Rounded, Emerges from Inside Case) */}
-                <div className="absolute -top-12 sm:-top-16 right-2 sm:right-3 z-20 pointer-events-none">
+                <div className="absolute -top-8 sm:-top-16 right-1 sm:right-3 z-20 pointer-events-none">
                   <img
                     src="/hero-bud-right.webp"
                     width={140}
@@ -216,12 +220,12 @@ export const HomePage: React.FC = () => {
                     loading="lazy"
                     decoding="async"
                     alt="K-Shop Right Airbod (8K Rounded)"
-                    className="w-9 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-right-8k"
+                    className="w-8 sm:w-13 lg:w-15 h-auto drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)] animate-bud-right-8k"
                   />
                 </div>
 
                 {/* Dual Case Container: Closed State transitioning to Open State with Gold K-Shop Inscription */}
-                <div className="relative w-28 sm:w-36 lg:w-44 h-24 sm:h-32 lg:h-38 flex items-center justify-center">
+                <div className="relative w-24 sm:w-36 lg:w-44 h-20 sm:h-32 lg:h-38 flex items-center justify-center">
                   {/* Closed Case Image */}
                   <img
                     src="/hero-case-closed.webp"
@@ -245,14 +249,14 @@ export const HomePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* COD Escrow Verified Badge */}
-              <div className="absolute bottom-2 sm:bottom-6 right-1 sm:right-6 z-30 bg-burgundy text-cream-100 px-4 py-3 rounded-2xl shadow-2xl border border-amber-400/30 max-w-[220px]">
-                <div className="flex items-center justify-between text-[10px] font-bold tracking-wider uppercase text-amber-200 mb-1">
-                  <span>COD ESCROW VERIFIED</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+              {/* COD Escrow Verified Badge: Compact Mobile Footprint */}
+              <div className="absolute bottom-1 sm:bottom-6 right-1 sm:right-6 z-30 bg-burgundy text-cream-100 px-2.5 py-1.5 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl border border-amber-400/30 max-w-[170px] sm:max-w-[220px]">
+                <div className="flex items-center justify-between text-[8px] sm:text-[10px] font-bold tracking-wider uppercase text-amber-200 mb-0.5 sm:mb-1">
+                  <span>COD ESCROW</span>
+                  <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
                 </div>
-                <h4 className="font-serif font-bold text-white text-xs">ZERO ADVANCE PAYMENT</h4>
-                <p className="text-[10px] text-cream-200/90 mt-0.5 leading-tight">Settle cash upon personal handover</p>
+                <h4 className="font-serif font-bold text-white text-[11px] sm:text-xs">ZERO ADVANCE</h4>
+                <p className="text-[9px] sm:text-[10px] text-cream-200/90 leading-tight">Pay upon handover</p>
               </div>
             </div>
           </div>
