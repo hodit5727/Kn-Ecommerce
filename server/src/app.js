@@ -143,7 +143,12 @@ export function createApp({ env, supabase, verification = null }) {
     }));
     app.use((req, res, next) => {
       if (req.method !== 'GET') return next();
-      if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/health') ||
+        req.path.startsWith('/assets') ||
+        /\.[a-zA-Z0-9]+$/.test(req.path)
+      ) {
         return next();
       }
       const indexHtml = path.join(distDir, 'index.html');
