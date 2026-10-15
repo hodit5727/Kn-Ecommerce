@@ -32,6 +32,7 @@ import {
   Clock,
   ChevronLeft,
   CheckCircle2,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   CATEGORY_CONFIG,
@@ -173,6 +174,111 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
+  // Mobile App-Switch & Reload Protection: restore pending OTP state if user switches to Gmail
+  const PENDING_FLOW_KEY = 'kshop_pending_auth_flow';
+
+  const savePendingFlow = (emailVal: string, cooldownSecs: number) => {
+    try {
+      sessionStorage.setItem(
+        PENDING_FLOW_KEY,
+        JSON.stringify({
+          email: emailVal,
+          step: 2,
+          cooldownExpiry: Date.now() + cooldownSecs * 1000,
+          savedAt: Date.now(),
+        })
+      );
+    } catch {}
+  };
+
+  const clearPendingFlow = () => {
+    try {
+      sessionStorage.removeItem(PENDING_FLOW_KEY);
+    } catch {}
+  };
+
+  // Restore step 2 if the mobile browser/APK reloaded while user checked Gmail
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PENDING_FLOW_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Only restore if within 15 minutes of sending OTP
+        if (parsed?.email && parsed?.step === 2 && Date.now() - (parsed.savedAt || 0) < 15 * 60 * 1000) {
+          setEmail(parsed.email);
+          setStep(2);
+          const remaining = Math.max(0, Math.floor(((parsed.cooldownExpiry || 0) - Date.now()) / 1000));
+          setResendCooldown(remaining);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // WebOTP API: native auto-fill on Android/iOS when notification arrives
+  useEffect(() => {
+    if (step !== 2) return;
+    if (typeof window === 'undefined' || !('credentials' in navigator) || !navigator.credentials) return;
+    const ac = new AbortController();
+    try {
+      (navigator.credentials as any).get({
+        otp: { transport: ['sms'] },
+        signal: ac.signal,
+      }).then((otpObj: any) => {
+        if (otpObj?.code) {
+          const digits = String(otpObj.code).replace(/\D/g, '').slice(0, 6);
+          if (digits.length === 6) {
+            setOtp(digits);
+            clearApiError();
+            showToast('OTP auto-filled!');
+          }
+        }
+      }).catch(() => {});
+    } catch {}
+    return () => ac.abort();
+  }, [step]);
+
+  // When returning from Gmail app, auto-detect 6-digit code in clipboard
+  useEffect(() => {
+    if (step !== 2) return;
+    const onVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && !otp) {
+        try {
+          if (navigator.clipboard?.readText) {
+            const clipText = await navigator.clipboard.readText();
+            const clean = clipText.replace(/\D/g, '').slice(0, 6);
+            if (clean.length === 6) {
+              setOtp(clean);
+              clearApiError();
+              showToast('Auto-detected OTP from clipboard!');
+            }
+          }
+        } catch {}
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [step, otp]);
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        showToast('Please long-press the box to paste.', 'error');
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      const clean = text.replace(/\D/g, '').slice(0, 6);
+      if (clean.length === 6) {
+        setOtp(clean);
+        clearApiError();
+        showToast('OTP pasted from clipboard!');
+      } else {
+        showToast('No 6-digit verification code found in clipboard.', 'error');
+      }
+    } catch {
+      showToast('Please long-press the box above to paste.', 'error');
+    }
+  };
+
   const clearApiError = () => setApiError(null);
 
   const clearFieldError = (field: keyof ProfileInput) => {
@@ -219,6 +325,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
     ) : null;
 
   const finish = (profile: UserProfile) => {
+    clearPendingFlow();
     const destination =
       profile.role === 'ADMIN' ? '/admin' : profile.role === 'SELLER' ? '/seller' : '/profile';
     navigate(destination);
@@ -241,6 +348,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
       }
       setResendCooldown(60);
       setOtp('');
+      savePendingFlow(email.trim(), 60);
       setStep(2);
     } catch (err) {
       setApiError(errorMessage(err, 'Could not send OTP. Please try again.'));
@@ -263,6 +371,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
       }
       setResendCooldown(60);
       setOtp('');
+      savePendingFlow(email.trim(), 60);
     } catch (err) {
       setApiError(errorMessage(err, 'Failed to resend OTP.'));
     } finally {
@@ -291,6 +400,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         const res = await verifyOtp(email.trim(), cleanOtp);
         setRequiresProfile(res.requiresProfile);
       }
+      clearPendingFlow();
       setPin('');
       setPinConfirm('');
       setStep(3);
@@ -678,6 +788,8 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
             <input
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
+              name="one-time-code"
               maxLength={6}
               placeholder="• • • • • •"
               required
@@ -697,6 +809,18 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
               }}
               className="w-full px-4 py-3 bg-white border-2 border-stone-200 rounded-xl text-center text-2xl tracking-[0.6em] font-mono text-stone-900 placeholder-stone-300 focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
             />
+          </div>
+
+          {/* Quick Clipboard Paste Button for Mobile & Web */}
+          <div className="flex justify-center -mt-2">
+            <button
+              type="button"
+              onClick={handlePasteFromClipboard}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cream-100 hover:bg-cream-200 text-burgundy text-xs font-semibold transition-colors border border-cream-200 active:scale-95"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5 text-burgundy" />
+              <span>Paste Code from Clipboard</span>
+            </button>
           </div>
 
           <Button type="submit" variant="primary" size="md" className="w-full" isLoading={isSubmitting}>
@@ -722,6 +846,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
             <button
               type="button"
               onClick={() => {
+                clearPendingFlow();
                 setStep(1);
                 setOtp('');
                 clearApiError();

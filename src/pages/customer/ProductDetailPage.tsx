@@ -33,7 +33,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Zap
+  Zap,
+  Share2,
 } from 'lucide-react';
 
 export const ProductDetailPage: React.FC = () => {
@@ -191,6 +192,35 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
 
+  const handleShare = async () => {
+    if (!product) return;
+    const shareData = {
+      title: `${product.name} | K-SHOP`,
+      text: product.tagline || `Discover ${product.name} on K-Shop Sovereign Luxury Marketplace`,
+      url: window.location.href,
+    };
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          copyShareLink();
+        }
+      }
+    } else {
+      copyShareLink();
+    }
+  };
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast('Product link copied to clipboard!');
+    } catch {
+      showToast('Unable to copy product link.', 'error');
+    }
+  };
+
   if (error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16">
@@ -292,6 +322,17 @@ export const ProductDetailPage: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               )}
+
+              {/* Quick Share Button on Media Stage */}
+              <button
+                type="button"
+                onClick={handleShare}
+                className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs p-2 rounded-xl text-[#4E453E] hover:text-[#8F0025] hover:bg-white shadow-sm border border-[#E8DCCF] z-10 transition-all flex items-center justify-center active:scale-95"
+                aria-label="Share product"
+                title="Share this product"
+              >
+                <Share2 className="w-4 h-4 text-[#8F0025]" />
+              </button>
 
               {/* Mobile Image Counter Badge */}
               {product.images.length > 1 && (
@@ -559,19 +600,31 @@ export const ProductDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Wishlist Button */}
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product.id)}
-                className={`w-full h-10 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                  inWishlist
-                    ? 'bg-rose-50 border-rose-200 text-[#8F0025]'
-                    : 'border-[#E8DCCF] bg-white text-[#171717] hover:bg-[#FFF9F2]'
-                }`}
-              >
-                <Heart className={`w-3.5 h-3.5 ${inWishlist ? 'fill-[#8F0025] text-[#8F0025]' : 'text-[#4E453E]'}`} />
-                <span>{inWishlist ? 'Saved in Wishlist' : 'Save to Wishlist'}</span>
-              </button>
+              {/* Wishlist & Share Action Row */}
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleWishlist(product.id)}
+                  className={`flex-1 h-10 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                    inWishlist
+                      ? 'bg-rose-50 border-rose-200 text-[#8F0025]'
+                      : 'border-[#E8DCCF] bg-white text-[#171717] hover:bg-[#FFF9F2]'
+                  }`}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${inWishlist ? 'fill-[#8F0025] text-[#8F0025]' : 'text-[#4E453E]'}`} />
+                  <span>{inWishlist ? 'Saved' : 'Wishlist'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex-1 h-10 rounded-xl border border-[#E8DCCF] bg-white text-[#171717] hover:bg-[#FFF9F2] text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs active:scale-[0.98]"
+                  aria-label="Share product"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-[#8F0025]" />
+                  <span>Share Product</span>
+                </button>
+              </div>
             </div>
 
             {/* Seller Information Card */}
@@ -759,34 +812,45 @@ export const ProductDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── MOBILE BOTTOM STICKY ACTION BAR ── */}
+      {/* ── MOBILE BOTTOM STICKY ACTION BAR (Flush to Bottom with Share) ── */}
       <div
-        className="fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-cream-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:hidden p-3 flex items-center justify-between gap-3"
+        className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E8DCCF] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:hidden px-3.5 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2.5"
       >
         <div className="shrink-0">
           <span className="text-[10px] uppercase font-bold text-[#4E453E] block leading-tight">
             Total Price
           </span>
-          <span className="text-xl font-serif font-bold text-[#171717] leading-none">
+          <span className="text-lg font-serif font-bold text-[#171717] leading-none">
             {formatINR(currentPrice * quantity)}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 max-w-[240px]">
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="p-2.5 rounded-xl border border-[#E8DCCF] bg-white text-[#4E453E] hover:text-[#8F0025] active:bg-[#FFF9F2] transition-colors shrink-0"
+            aria-label="Share product"
+            title="Share"
+          >
+            <Share2 className="w-4 h-4 text-[#8F0025]" />
+          </button>
+
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={currentStock <= 0}
-            className="flex-1 py-2.5 rounded-xl border border-[#8F0025] text-[#8F0025] bg-white text-xs font-bold flex items-center justify-center gap-1 active:bg-[#8F0025]/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3.5 py-2.5 rounded-xl border border-[#8F0025] text-[#8F0025] bg-white text-xs font-bold flex items-center justify-center gap-1 active:bg-[#8F0025]/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ShoppingBag className="w-3.5 h-3.5" />
             <span>Bag</span>
           </button>
+
           <button
             type="button"
             onClick={handleBuyNow}
             disabled={currentStock <= 0}
-            className="flex-1 py-2.5 rounded-xl bg-[#8F0025] hover:bg-[#72001e] text-white text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2.5 rounded-xl bg-[#8F0025] hover:bg-[#72001e] text-white text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
             <span>Buy COD</span>
