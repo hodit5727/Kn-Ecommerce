@@ -239,28 +239,56 @@ export const ProductDetailPage: React.FC = () => {
       <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12" aria-busy="true" aria-label="Loading product details">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
           {/* Breadcrumb Skeleton */}
-          <div className="h-5 w-48 sm:w-64 bg-stone-200/80 rounded animate-pulse my-0.5" />
+          <div className="flex items-center gap-2 py-1 overflow-hidden">
+            <div className="h-4 w-12 bg-stone-200/80 rounded animate-pulse" />
+            <div className="h-3 w-3 bg-stone-200/50 rounded animate-pulse" />
+            <div className="h-4 w-16 bg-stone-200/80 rounded animate-pulse" />
+            <div className="h-3 w-3 bg-stone-200/50 rounded animate-pulse" />
+            <div className="h-4 w-44 sm:w-64 bg-stone-200/80 rounded animate-pulse" />
+          </div>
 
           {/* 50/50 Grid Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 items-start">
             {/* Left Column (Image Stage) */}
             <div className="space-y-3">
-              <div className="aspect-square w-full rounded-2xl bg-stone-200/70 border border-[#E8DCCF] animate-pulse" />
-              <div className="h-11 w-full rounded-xl bg-stone-200/60 animate-pulse" />
+              <div
+                className="aspect-square w-full rounded-2xl bg-stone-200/70 border border-[#E8DCCF] animate-pulse"
+                style={{ aspectRatio: '1 / 1' }}
+              />
+              <div className="h-[38px] w-full rounded-xl bg-white border border-[#E8DCCF] shadow-xs flex items-center justify-between px-4 animate-pulse">
+                <div className="h-3 w-28 bg-stone-200/80 rounded" />
+                <div className="h-3 w-20 bg-stone-200/80 rounded" />
+              </div>
             </div>
 
             {/* Right Column (Product Information) */}
             <div className="bg-white rounded-2xl p-5 sm:p-6 lg:p-7 border border-[#E8DCCF] shadow-xs space-y-5">
               <div className="space-y-2">
-                <div className="h-3.5 w-24 bg-stone-200 rounded animate-pulse" />
-                <div className="h-8 w-4/5 bg-stone-200 rounded animate-pulse" />
+                <div className="flex items-center justify-between">
+                  <div className="h-3.5 w-24 bg-stone-200 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-stone-100 rounded-full animate-pulse" />
+                </div>
+                <div className="h-7 w-4/5 bg-stone-200 rounded animate-pulse" />
                 <div className="h-4 w-3/5 bg-stone-200/70 rounded animate-pulse" />
               </div>
               <div className="h-20 w-full rounded-xl bg-[#FFF9F2] border border-[#E8DCCF] animate-pulse" />
-              <div className="h-12 w-full rounded-xl bg-stone-100 animate-pulse" />
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="h-12 rounded-xl bg-stone-200 animate-pulse" />
-                <div className="h-12 rounded-xl bg-[#8F0025]/30 animate-pulse" />
+              <div className="h-10 w-full rounded-xl bg-stone-100 animate-pulse" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div className="h-11 rounded-xl bg-stone-200 animate-pulse" />
+                <div className="h-11 rounded-xl bg-[#8F0025]/30 animate-pulse" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="h-10 rounded-xl bg-stone-100 animate-pulse" />
+                <div className="h-10 rounded-xl bg-stone-100 animate-pulse" />
+              </div>
+
+              {/* Seller Skeleton inside card */}
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#FFF9F2]/70 border border-[#E8DCCF] h-16 animate-pulse" />
+
+              {/* Delivery Protocols Skeleton inside card */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="h-10 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
+                <div className="h-10 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
               </div>
             </div>
           </div>
@@ -297,7 +325,10 @@ export const ProductDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 items-start">
           {/* Left Column: Media Stage & 3D Interactive Viewport */}
           <div className="space-y-3 lg:sticky lg:top-6">
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-2xs">
+            <div
+              className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-2xs"
+              style={{ aspectRatio: '1 / 1' }}
+            >
               {activeMediaTab === '3d' ? (
                 <Suspense
                   fallback={
@@ -319,7 +350,7 @@ export const ProductDetailPage: React.FC = () => {
                   height={600}
                   fetchPriority="high"
                   decoding="async"
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
               )}
 

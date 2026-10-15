@@ -130,6 +130,18 @@ export function createApp({ env, supabase, verification = null }) {
 
   const distDir = findDistPath();
   if (distDir) {
+    const indexHtmlPath = path.join(distDir, 'index.html');
+    let indexHtmlTemplate = '';
+    try {
+      indexHtmlTemplate = fs.readFileSync(indexHtmlPath, 'utf8');
+    } catch {
+      indexHtmlTemplate = '';
+    }
+
+    const lcpImageCache = new Map();
+    const MAX_LCP_CACHE = 500;
+    const LCP_CACHE_TTL_MS = 10 * 60 * 1000;
+
     app.use(express.static(distDir, {
       maxAge: '1y',
       immutable: true,
@@ -145,7 +157,8 @@ export function createApp({ env, supabase, verification = null }) {
         }
       },
     }));
-    app.use((req, res, next) => {
+
+    app.use(async (req, res, next) => {
       if (req.method !== 'GET') return next();
       if (
         req.path.startsWith('/api') ||
@@ -155,9 +168,64 @@ export function createApp({ env, supabase, verification = null }) {
       ) {
         return next();
       }
-      const indexHtml = path.join(distDir, 'index.html');
+
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return res.sendFile(indexHtml);
+      const baseLinkHeader = '<https://fonts.googleapis.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect; crossorigin, <https://dzyckrjvwbhfmgrxbjuk.supabase.co>; rel=preconnect; crossorigin';
+
+      // Dynamic LCP image discovery for /products/:id
+      const productMatch = req.path.match(/^\/products\/([0-9a-fA-F-]{36})$/);
+      if (productMatch && supabase && typeof supabase.from === 'function') {
+        const productId = productMatch[1];
+        let cached = lcpImageCache.get(productId);
+        const now = Date.now();
+
+        if (!cached || cached.expiresAt < now) {
+          try {
+            const { data } = await supabase
+              .from('products')
+              .select('images')
+              .eq('id', productId)
+              .maybeSingle();
+
+            if (data?.images?.[0]) {
+              const rawImg = data.images[0];
+              let optUrl = rawImg;
+              let opt400 = rawImg;
+              let opt1200 = rawImg;
+              if (typeof rawImg === 'string' && rawImg.includes('/storage/v1/object/public/')) {
+                const base = rawImg.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+                const sep = base.includes('?') ? '&' : '?';
+                optUrl = `${base}${sep}width=800&quality=80`;
+                opt400 = `${base}${sep}width=400&quality=80`;
+                opt1200 = `${base}${sep}width=1200&quality=85`;
+              }
+              const srcSet = `${opt400} 400w, ${optUrl} 800w, ${opt1200} 1200w`;
+              const preloadTag = `<link rel="preload" as="image" href="${optUrl}" imagesrcset="${srcSet}" imagesizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px" fetchpriority="high" />`;
+              cached = {
+                preloadTag,
+                imgUrl: optUrl,
+                expiresAt: now + LCP_CACHE_TTL_MS,
+              };
+              if (lcpImageCache.size >= MAX_LCP_CACHE) {
+                const firstKey = lcpImageCache.keys().next().value;
+                if (firstKey) lcpImageCache.delete(firstKey);
+              }
+              lcpImageCache.set(productId, cached);
+            }
+          } catch {
+            // Graceful fallback to default index.html
+          }
+        }
+
+        if (cached?.preloadTag && indexHtmlTemplate) {
+          res.setHeader('Link', `${baseLinkHeader}, <${cached.imgUrl}>; rel=preload; as=image; fetchpriority=high`);
+          const html = indexHtmlTemplate.replace('<!-- LCP_PRELOAD_SLOT -->', cached.preloadTag);
+          return res.type('html').send(html);
+        }
+      }
+
+      res.setHeader('Link', baseLinkHeader);
+      return res.sendFile(indexHtmlPath);
     });
   } else {
     app.get('/', (_req, res) => {

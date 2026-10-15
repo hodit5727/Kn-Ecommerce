@@ -12,9 +12,9 @@ const AdminLayout = lazy(() => import('../components/layout/AdminLayout').then(m
 // Core Storefront Page (Eagerly loaded for instant first paint)
 import { HomePage } from '../pages/customer/HomePage';
 
-// Storefront Secondary & Conversion Pages (Lazy loaded on demand)
+// Storefront Secondary & Conversion Pages (Eagerly import ProductDetailPage for instant zero-delay render)
+import { ProductDetailPage } from '../pages/customer/ProductDetailPage';
 const ProductsPage = lazy(() => import('../pages/customer/ProductsPage').then(m => ({ default: m.ProductsPage })));
-const ProductDetailPage = lazy(() => import('../pages/customer/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
 const CartPage = lazy(() => import('../pages/customer/CartPage').then(m => ({ default: m.CartPage })));
 const CheckoutPage = lazy(() => import('../pages/customer/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
 const OrdersPage = lazy(() => import('../pages/customer/OrdersPage').then(m => ({ default: m.OrdersPage })));
