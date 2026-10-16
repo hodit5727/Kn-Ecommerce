@@ -315,7 +315,7 @@ export const ProductDetailPage: React.FC = () => {
 
   const primaryImage = product.images[activeImageIndex] || product.images[0];
 
-  const productSchema = {
+  const productSchema: Record<string, any> = {
     '@type': 'Product',
     name: product.name,
     image: product.images,
@@ -327,19 +327,22 @@ export const ProductDetailPage: React.FC = () => {
     },
     offers: {
       '@type': 'Offer',
-      url: `https://kn-ecommerce-production.up.railway.app/product/${product.id}`,
+      url: typeof window !== 'undefined' ? window.location.href : `https://kn-ecommerce-production.up.railway.app/product/${product.id}`,
       priceCurrency: 'INR',
       price: product.price,
       priceValidUntil: '2027-12-31',
       availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.rating || 4.9,
-      reviewCount: product.reviewCount || 12,
-    },
   };
+
+  if (product.rating && product.reviewCount && product.reviewCount > 0) {
+    productSchema.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: product.rating,
+      reviewCount: product.reviewCount,
+    };
+  }
 
   const breadcrumbsSchema = {
     '@type': 'BreadcrumbList',

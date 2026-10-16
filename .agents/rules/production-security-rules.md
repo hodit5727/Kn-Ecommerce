@@ -1,0 +1,32 @@
+---
+name: production-security-rules
+description: Mandatory production security rules for every coding, debugging, refactoring, and feature implementation task.
+always_on: true
+---
+
+# Production Security Rules
+
+These rules are mandatory for every coding, debugging, refactoring, and feature implementation task in this project.
+
+1. **Identity & Authorization Authority**: Never use `localStorage`, `sessionStorage`, or client-controlled profile objects as the authoritative source for user identity or authorization.
+2. **Backend Authentication**: Authentication must be verified using the real authenticated backend/session.
+3. **Server-Side Authorization**: Authorization must be enforced by the backend/database/RLS.
+4. **No Client Privilege Reliance**: Never use `localStorage` user IDs, `isAdmin` flags, roles, or client-side values to authorize protected operations.
+5. **No Production Mock Data**: Never use mock, fake, dummy, demo, placeholder, or hardcoded application data in production functionality.
+6. **No Fallback Mocking**: Never use mock data as a fallback when Supabase, Firebase, API, or database requests fail.
+7. **Error Visibility**: Never silently ignore errors. No empty catch blocks and no `.catch(() => {})`.
+8. **True Operation Confirmation**: Only show a success UI after the required backend/database operation actually succeeds.
+9. **Zero Secrets in Code**: Never hardcode passwords, secrets, service-role keys, private keys, database credentials, or privileged API keys.
+10. **Supabase Security Architecture**: For Supabase, use Supabase Auth for identity and RLS/`auth.uid()` for authorization.
+11. **Security Control Preservation**: Before modifying existing code, inspect the existing implementation and preserve existing security controls.
+12. **Pre-Completion Audit**: Before completing any task, inspect changed code for `localStorage`, `sessionStorage`, mock data, hardcoded data, fake authentication, fallback data, `isAdmin`, `user_profile`, empty catch blocks, ignored database errors, and exposed secrets.
+13. **Graceful Error States**: If the real backend is unavailable, show an error state instead of creating fake functionality.
+14. **Verifiable Test Claims**: Never claim a security test passed unless it was actually executed and verified.
+
+---
+
+## Zero Hardcoding Mandate
+
+- Never inject hardcoded ratings (e.g. `|| 4.9`), fake review counts (e.g. `|| 12`), placeholder prices, dummy customer names, or mock responses.
+- If data is absent from the backend/database, omit the field, display empty/loading states, or return genuine error feedback.
+- Every single line of code written in this repository must comply with these 14 rules without exception.
