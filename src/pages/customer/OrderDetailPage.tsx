@@ -84,6 +84,7 @@ export const OrderDetailPage: React.FC = () => {
   // Generate live scannable QR code
   useEffect(() => {
     if (!order) return;
+    if (order.orderStatus === 'COD_DELIVERED' || order.orderStatus === 'COD_CANCELLED') return;
     const qrPayload = JSON.stringify({
       orderId: order.id,
       orderCode: displayOrderCode,
@@ -173,6 +174,9 @@ export const OrderDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  const isDelivered = order.orderStatus === 'COD_DELIVERED';
+  const isCancelled = order.orderStatus === 'COD_CANCELLED';
 
   return (
     <>
@@ -296,8 +300,41 @@ export const OrderDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Dedicated Handover QR Code & Campus Pass Section */}
-          <div className="bg-gradient-to-br from-white to-cream-50 rounded-3xl p-6 sm:p-7 border-2 border-cream-300 shadow-soft">
+          {/* Delivered Handover Confirmation Banner */}
+          {isDelivered && (
+            <div className="bg-emerald-50/80 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-emerald-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-sm sm:text-base text-emerald-950 flex items-center gap-2">
+                    Delivery Handover Completed
+                    <span className="text-[10px] font-sans font-bold bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-300">
+                      DELIVERED
+                    </span>
+                  </h3>
+                  <p className="text-xs text-emerald-800 mt-0.5">
+                    Package has been verified and received on campus. Handover QR pass is completed and archived.
+                  </p>
+                </div>
+              </div>
+              {order.isEligibleForRefund && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsRefundModalOpen(true)}
+                  className="shrink-0 bg-white border-emerald-300 text-emerald-900 hover:bg-emerald-100"
+                >
+                  Request Refund
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Dedicated Handover QR Code & Campus Pass Section (Active only when pending delivery) */}
+          {!isDelivered && !isCancelled && (
+            <div className="bg-gradient-to-br from-white to-cream-50 rounded-3xl p-6 sm:p-7 border-2 border-cream-300 shadow-soft">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-cream-200">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-burgundy/10 flex items-center justify-center text-burgundy">
@@ -451,6 +488,7 @@ export const OrderDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
 
           {/* Timeline Card */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-cream-200 shadow-soft">

@@ -81,6 +81,10 @@ export const OrdersPage: React.FC = () => {
     const generateAllQrs = async () => {
       const urls: Record<string, string> = {};
       for (const order of orders) {
+        if (order.orderStatus === 'COD_DELIVERED' || order.orderStatus === 'COD_CANCELLED') {
+          continue;
+        }
+
         const orderCode =
           order.orderCode ||
           (order.orderNumber?.match(/\d{4}$/)
@@ -276,6 +280,8 @@ export const OrdersPage: React.FC = () => {
                     : `KNOR-${order.id.slice(0, 4).toUpperCase()}`);
                 const isUnlocked = unlockedOrderIds.has(order.id);
                 const qrUrl = qrCodeUrls[order.id];
+                const isDelivered = order.orderStatus === 'COD_DELIVERED';
+                const isCancelled = order.orderStatus === 'COD_CANCELLED';
 
                 return (
                   <div
@@ -350,122 +356,146 @@ export const OrdersPage: React.FC = () => {
                       <OrderTimeline currentStatus={order.orderStatus} events={order.timeline} />
                     </div>
 
-                    {/* 4. Single-Page Live Delivery Handover Pass & QR Code */}
-                    <div className="bg-gradient-to-br from-white to-cream-50 rounded-2xl p-5 sm:p-6 border-2 border-cream-300 shadow-xs">
-                      <div className="flex items-center justify-between pb-3 border-b border-cream-200">
-                        <div className="flex items-center gap-2">
-                          <QrIcon className="w-5 h-5 text-burgundy" />
+                    {/* 4. Single-Page Live Delivery Handover Pass & QR Code (Active only when pending delivery) */}
+                    {!isDelivered && !isCancelled && (
+                      <div className="bg-gradient-to-br from-white to-cream-50 rounded-2xl p-5 sm:p-6 border-2 border-cream-300 shadow-xs">
+                        <div className="flex items-center justify-between pb-3 border-b border-cream-200">
+                          <div className="flex items-center gap-2">
+                            <QrIcon className="w-5 h-5 text-burgundy" />
+                            <div>
+                              <strong className="font-serif font-bold text-xs sm:text-sm text-stone-900 block">
+                                Campus Delivery Handover Pass
+                              </strong>
+                              <p className="text-[11px] text-stone-500">
+                                Present this pass on your phone to the delivery personnel upon delivery.
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* In-Place Eye Unlock Button */}
                           <div>
-                            <strong className="font-serif font-bold text-xs sm:text-sm text-stone-900 block">
-                              Campus Delivery Handover Pass
-                            </strong>
-                            <p className="text-[11px] text-stone-500">
-                              Present this pass on your phone to the delivery personnel upon delivery.
-                            </p>
+                            {isUnlocked ? (
+                              <button
+                                onClick={() => {
+                                  setUnlockedOrderIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(order.id);
+                                    return next;
+                                  });
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 text-xs font-semibold"
+                              >
+                                <EyeOff className="w-3.5 h-3.5" /> Lock Pass
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setActivePinOrder(order)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-burgundy text-white hover:bg-burgundy/90 text-xs font-semibold shadow-xs"
+                              >
+                                <Eye className="w-3.5 h-3.5" /> Unlock QR Pass
+                              </button>
+                            )}
                           </div>
                         </div>
 
-                        {/* In-Place Eye Unlock Button */}
-                        <div>
-                          {isUnlocked ? (
-                            <button
-                              onClick={() => {
-                                setUnlockedOrderIds((prev) => {
-                                  const next = new Set(prev);
-                                  next.delete(order.id);
-                                  return next;
-                                });
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 text-xs font-semibold"
-                            >
-                              <EyeOff className="w-3.5 h-3.5" /> Lock Pass
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setActivePinOrder(order)}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-burgundy text-white hover:bg-burgundy/90 text-xs font-semibold shadow-xs"
-                            >
-                              <Eye className="w-3.5 h-3.5" /> Unlock QR Pass
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Unlocked QR Pass Details or Locked Preview */}
-                      <div className="pt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                        <div className="sm:col-span-5 flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-cream-200 text-center">
-                          {isUnlocked ? (
-                            <>
-                              {qrUrl ? (
-                                <img
-                                  src={qrUrl}
-                                  alt="Delivery QR"
-                                  className="w-36 h-36 rounded-lg border border-stone-200 p-1.5 bg-white shadow-inner"
-                                />
-                              ) : (
-                                <div className="w-36 h-36 rounded-lg bg-stone-100 flex items-center justify-center text-[10px] text-stone-400">
-                                  Generating QR...
+                        {/* Unlocked QR Pass Details or Locked Preview */}
+                        <div className="pt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                          <div className="sm:col-span-5 flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-cream-200 text-center">
+                            {isUnlocked ? (
+                              <>
+                                {qrUrl ? (
+                                  <img
+                                    src={qrUrl}
+                                    alt="Delivery QR"
+                                    className="w-36 h-36 rounded-lg border border-stone-200 p-1.5 bg-white shadow-inner"
+                                  />
+                                ) : (
+                                  <div className="w-36 h-36 rounded-lg bg-stone-100 flex items-center justify-center text-[10px] text-stone-400">
+                                    Generating QR...
+                                  </div>
+                                )}
+                                <span className="font-mono text-xs font-bold text-stone-800 mt-1.5 block">
+                                  {code}
+                                </span>
+                                <span className="text-[9px] text-stone-400 uppercase tracking-wider">
+                                  Scannable by Campus Delivery App
+                                </span>
+                              </>
+                            ) : (
+                              <div className="py-4 px-2 flex flex-col items-center justify-center space-y-2">
+                                <div className="w-10 h-10 rounded-full bg-cream-100 flex items-center justify-center text-burgundy">
+                                  <Lock className="w-5 h-5" />
                                 </div>
-                              )}
-                              <span className="font-mono text-xs font-bold text-stone-800 mt-1.5 block">
-                                {code}
-                              </span>
-                              <span className="text-[9px] text-stone-400 uppercase tracking-wider">
-                                Scannable by Campus Delivery App
-                              </span>
-                            </>
-                          ) : (
-                            <div className="py-4 px-2 flex flex-col items-center justify-center space-y-2">
-                              <div className="w-10 h-10 rounded-full bg-cream-100 flex items-center justify-center text-burgundy">
-                                <Lock className="w-5 h-5" />
+                                <span className="text-xs font-bold text-stone-800">
+                                  Delivery Pass Locked
+                                </span>
+                                <span className="text-[10px] text-stone-500 max-w-[160px]">
+                                  Click "Unlock QR Pass" to verify your 4-digit PIN
+                                </span>
                               </div>
-                              <span className="text-xs font-bold text-stone-800">
-                                Delivery Pass Locked
-                              </span>
-                              <span className="text-[10px] text-stone-500 max-w-[160px]">
-                                Click "Unlock QR Pass" to verify your 4-digit PIN
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
 
-                        {/* Mapped Customer Delivery Details */}
-                        <div className="sm:col-span-7 space-y-2 text-xs">
-                          <div className="bg-white p-3.5 rounded-xl border border-cream-200 space-y-1.5">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <span className="text-stone-400 text-[10px] block">Customer Name</span>
-                                <strong className="text-stone-900 font-semibold">
-                                  {order.shippingAddress.fullName}
-                                </strong>
+                          {/* Mapped Customer Delivery Details */}
+                          <div className="sm:col-span-7 space-y-2 text-xs">
+                            <div className="bg-white p-3.5 rounded-xl border border-cream-200 space-y-1.5">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-stone-400 text-[10px] block">Customer Name</span>
+                                  <strong className="text-stone-900 font-semibold">
+                                    {order.shippingAddress.fullName}
+                                  </strong>
+                                </div>
+                                <div>
+                                  <span className="text-stone-400 text-[10px] block">Mobile Phone</span>
+                                  <strong className="text-stone-900 font-mono">
+                                    {order.shippingAddress.phone}
+                                  </strong>
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="text-stone-400 text-[10px] block">Campus & Department</span>
+                                  <p className="text-stone-800 font-medium">
+                                    {order.shippingAddress.streetAddress}
+                                    {order.shippingAddress.apartmentSuite && ` • ${order.shippingAddress.apartmentSuite}`}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <span className="text-stone-400 text-[10px] block">Mobile Phone</span>
-                                <strong className="text-stone-900 font-mono">
-                                  {order.shippingAddress.phone}
-                                </strong>
-                              </div>
-                              <div className="col-span-2">
-                                <span className="text-stone-400 text-[10px] block">Campus & Department</span>
-                                <p className="text-stone-800 font-medium">
-                                  {order.shippingAddress.streetAddress}
-                                  {order.shippingAddress.apartmentSuite && ` • ${order.shippingAddress.apartmentSuite}`}
-                                </p>
-                              </div>
-                            </div>
 
-                            <div className="pt-2 border-t border-cream-100 flex items-center justify-between">
-                              <span className="text-[10px] uppercase font-bold text-stone-500">
-                                COD Cash Due:
-                              </span>
-                              <span className="font-serif font-bold text-base text-burgundy">
-                                {formatINR(order.totalAmount)}
-                              </span>
+                              <div className="pt-2 border-t border-cream-100 flex items-center justify-between">
+                                <span className="text-[10px] uppercase font-bold text-stone-500">
+                                  COD Cash Due:
+                                </span>
+                                <span className="font-serif font-bold text-base text-burgundy">
+                                  {formatINR(order.totalAmount)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Completed Handover Confirmation (Replaces QR Pass after delivery) */}
+                    {isDelivered && (
+                      <div className="bg-emerald-50/70 rounded-2xl p-3.5 sm:p-4 border border-emerald-200/80 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                            <CheckCircle2 className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-emerald-950 block truncate">
+                              Delivery Handover Completed
+                            </span>
+                            <span className="text-[11px] text-emerald-700 block truncate">
+                              Order delivered and verified. Delivery QR pass archived.
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-300 shrink-0">
+                          VERIFIED
+                        </span>
+                      </div>
+                    )}
 
                     {/* 5. Footer Actions (Cancel / Refund) */}
                     <div className="flex items-center justify-between pt-2 text-xs">
