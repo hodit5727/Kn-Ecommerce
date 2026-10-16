@@ -16,6 +16,29 @@ import {
   RotateCcw
 } from 'lucide-react';
 
+/** Shared status pill used by both the desktop table and the mobile cards */
+const StockStatusBadge: React.FC<{ status: InventoryItem['status'] }> = ({ status }) => {
+  if (status === 'LOW_STOCK') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rosered-700 bg-rosered-50 border border-rosered-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+        <AlertTriangle className="w-3 h-3" /> Low Stock
+      </span>
+    );
+  }
+  if (status === 'OUT_OF_STOCK') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+        Depleted
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+      <CheckCircle2 className="w-3 h-3" /> In Stock
+    </span>
+  );
+};
+
 export const SellerInventoryPage: React.FC = () => {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -67,7 +90,7 @@ export const SellerInventoryPage: React.FC = () => {
   const lowStockCount = items.filter((i) => i.isLowStock).length;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-cream-200">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-burgundy block mb-1">
@@ -81,21 +104,21 @@ export const SellerInventoryPage: React.FC = () => {
         {/* Low stock alert badge */}
         {lowStockCount > 0 && (
           <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rosered-50 border border-rosered-200 text-rosered-700 text-xs font-semibold">
-            <AlertTriangle className="w-4 h-4 text-rosered-600" />
+            <AlertTriangle className="w-4 h-4 text-rosered-600 shrink-0" />
             <span>{lowStockCount} SKU{lowStockCount === 1 ? '' : 's'} at or below threshold</span>
           </div>
         )}
       </div>
 
       {/* Search Filter */}
-      <div className="bg-white p-4 rounded-2xl border border-cream-200 shadow-soft flex items-center gap-3">
-        <Search className="w-4 h-4 text-stone-400" />
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-cream-200 shadow-soft flex items-center gap-3">
+        <Search className="w-4 h-4 text-stone-400 shrink-0" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter SKU or artifact title..."
-          className="w-full text-xs text-stone-900 bg-transparent focus:outline-none"
+          className="w-full min-w-0 text-xs text-stone-900 bg-transparent focus:outline-none"
         />
       </div>
 
@@ -106,99 +129,193 @@ export const SellerInventoryPage: React.FC = () => {
           Auditing physical stock levels...
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-cream-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-6">Artifact Title</th>
-                  <th className="py-4 px-4">SKU</th>
-                  <th className="py-4 px-4">Price</th>
-                  <th className="py-4 px-4">Available</th>
-                  <th className="py-4 px-4">Reserved</th>
-                  <th className="py-4 px-4">Sold</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-6 text-right">Quick Stock Adjustment</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cream-100">
-                {filtered.map((item) => (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${
-                      item.isLowStock ? 'bg-rosered-50/20 hover:bg-rosered-50/30' : 'hover:bg-cream-50/50'
-                    }`}
-                  >
-                    <td className="py-4 px-6 font-serif font-semibold text-stone-900">
+        <>
+          {/* ── MOBILE: stacked cards (visible below md) ─────────────────────── */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 && (
+              <div className="py-12 text-center text-xs text-stone-500 bg-white rounded-2xl border border-cream-200">
+                No inventory records match your filter.
+              </div>
+            )}
+
+            {filtered.map((item) => (
+              <div
+                key={item.id}
+                className={`rounded-2xl border shadow-soft p-4 space-y-3 ${
+                  item.isLowStock
+                    ? 'bg-rosered-50/30 border-rosered-200'
+                    : 'bg-white border-cream-200'
+                }`}
+              >
+                {/* Title + status */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-serif font-semibold text-sm text-stone-900 break-words">
                       {item.productName}
-                    </td>
-                    <td className="py-4 px-4 font-mono text-stone-600 text-[11px]">{item.sku}</td>
-                    <td className="py-4 px-4 font-bold text-stone-900">{formatINR(item.price)}</td>
-                    <td className="py-4 px-4">
-                      {editingId === item.id ? (
-                        <div className="flex items-center gap-1.5 w-24">
-                          <input
-                            type="number"
-                            value={tempStock}
-                            onChange={(e) => setTempStock(Number(e.target.value))}
-                            className="w-16 bg-white border border-stone-300 rounded p-1 text-xs"
-                          />
-                        </div>
-                      ) : (
-                        <span className="font-bold text-sm text-stone-900">
-                          {item.availableStock}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-stone-500">{item.reservedStock}</td>
-                    <td className="py-4 px-4 text-emerald-700 font-semibold">{item.soldQuantity}</td>
-                    <td className="py-4 px-4">
-                      {item.status === 'LOW_STOCK' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rosered-700 bg-rosered-50 border border-rosered-200 px-2 py-0.5 rounded-full">
-                          <AlertTriangle className="w-3 h-3" /> Low Stock
-                        </span>
-                      ) : item.status === 'OUT_OF_STOCK' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
-                          Depleted
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="w-3 h-3" /> In Stock
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      {editingId === item.id ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleSaveStock(item.id)}
-                            className="px-2.5 py-1 rounded-lg bg-burgundy text-white text-xs font-semibold"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 text-xs"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStartEdit(item)}
-                        >
-                          Update Count
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </h3>
+                    <p className="font-mono text-[11px] text-stone-500 mt-0.5 break-all">
+                      {item.sku}
+                    </p>
+                  </div>
+                  <StockStatusBadge status={item.status} />
+                </div>
+
+                {/* Price */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-500">Price</span>
+                  <span className="font-bold text-stone-900">{formatINR(item.price)}</span>
+                </div>
+
+                {/* Stock figures side by side */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-cream-50/80 border border-cream-200 p-2.5 text-center">
+                    <span className="block text-[10px] uppercase tracking-wider text-stone-500 font-semibold">
+                      Available
+                    </span>
+                    {editingId === item.id ? (
+                      <input
+                        type="number"
+                        value={tempStock}
+                        onChange={(e) => setTempStock(Number(e.target.value))}
+                        className="mt-1 w-full bg-white border border-stone-300 rounded p-1 text-xs text-center"
+                      />
+                    ) : (
+                      <span className="block mt-1 font-bold text-sm text-stone-900">
+                        {item.availableStock}
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-xl bg-cream-50/80 border border-cream-200 p-2.5 text-center">
+                    <span className="block text-[10px] uppercase tracking-wider text-stone-500 font-semibold">
+                      Reserved
+                    </span>
+                    <span className="block mt-1 font-semibold text-sm text-stone-600">
+                      {item.reservedStock}
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-cream-50/80 border border-cream-200 p-2.5 text-center">
+                    <span className="block text-[10px] uppercase tracking-wider text-stone-500 font-semibold">
+                      Sold
+                    </span>
+                    <span className="block mt-1 font-semibold text-sm text-emerald-700">
+                      {item.soldQuantity}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                {editingId === item.id ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleSaveStock(item.id)}
+                      className="py-2 rounded-xl bg-burgundy text-white text-xs font-semibold"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 text-xs font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleStartEdit(item)}
+                  >
+                    Update Count
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* ── DESKTOP / TABLET: table (visible from md up) ─────────────────── */}
+          <div className="hidden md:block bg-white rounded-3xl border border-cream-200 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
+                    <th className="py-4 px-6">Artifact Title</th>
+                    <th className="py-4 px-4">SKU</th>
+                    <th className="py-4 px-4">Price</th>
+                    <th className="py-4 px-4">Available</th>
+                    <th className="py-4 px-4">Reserved</th>
+                    <th className="py-4 px-4">Sold</th>
+                    <th className="py-4 px-4">Status</th>
+                    <th className="py-4 px-6 text-right">Quick Stock Adjustment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-cream-100">
+                  {filtered.map((item) => (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        item.isLowStock ? 'bg-rosered-50/20 hover:bg-rosered-50/30' : 'hover:bg-cream-50/50'
+                      }`}
+                    >
+                      <td className="py-4 px-6 font-serif font-semibold text-stone-900">
+                        {item.productName}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-stone-600 text-[11px]">{item.sku}</td>
+                      <td className="py-4 px-4 font-bold text-stone-900">{formatINR(item.price)}</td>
+                      <td className="py-4 px-4">
+                        {editingId === item.id ? (
+                          <div className="flex items-center gap-1.5 w-24">
+                            <input
+                              type="number"
+                              value={tempStock}
+                              onChange={(e) => setTempStock(Number(e.target.value))}
+                              className="w-16 bg-white border border-stone-300 rounded p-1 text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <span className="font-bold text-sm text-stone-900">
+                            {item.availableStock}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-stone-500">{item.reservedStock}</td>
+                      <td className="py-4 px-4 text-emerald-700 font-semibold">{item.soldQuantity}</td>
+                      <td className="py-4 px-4">
+                        <StockStatusBadge status={item.status} />
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        {editingId === item.id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleSaveStock(item.id)}
+                              className="px-2.5 py-1 rounded-lg bg-burgundy text-white text-xs font-semibold"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="px-2.5 py-1 rounded-lg text-stone-500 hover:bg-stone-100 text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleStartEdit(item)}
+                          >
+                            Update Count
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
