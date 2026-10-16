@@ -64,9 +64,35 @@ export function createApp({ env, supabase, verification = null }) {
   };
 
   app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", "data:"],
+        imgSrc: ["'self'", "data:", "blob:", "https:", "*.supabase.co"],
+        connectSrc: ["'self'", "https:", "*.supabase.co", "wss:"],
+        mediaSrc: ["'self'", "blob:", "data:"],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
   }));
+
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(self)');
+    next();
+  });
   app.use(cookieParser(env.SESSION_SECRET));
   app.use(express.json({ limit: '10mb' }));
   app.use(corsMiddleware(env)); // allowlist + credentials
@@ -127,6 +153,63 @@ export function createApp({ env, supabase, verification = null }) {
       });
     }
     res.json({ ok: true });
+  });
+
+  // ── Technical SEO: Dynamic XML Sitemap ────────────────────────────────────
+  app.get('/sitemap.xml', async (_req, res) => {
+    try {
+      const baseUrl = 'https://kn-ecommerce-production.up.railway.app';
+      const dbClient = supabase?.service || supabase;
+      let products = [];
+      if (dbClient && typeof dbClient.from === 'function') {
+        const { data } = await dbClient
+          .from('products')
+          .select('id, updated_at, created_at')
+          .eq('status', 'APPROVED');
+        products = data || [];
+      }
+
+      const now = new Date().toISOString().split('T')[0];
+      const staticPages = [
+        { loc: '/', priority: '1.0', changefreq: 'daily' },
+        { loc: '/products', priority: '0.9', changefreq: 'daily' },
+        { loc: '/faq', priority: '0.8', changefreq: 'weekly' },
+        { loc: '/contact', priority: '0.7', changefreq: 'monthly' },
+        { loc: '/support', priority: '0.6', changefreq: 'monthly' },
+        { loc: '/privacy-policy', priority: '0.5', changefreq: 'monthly' },
+        { loc: '/terms-of-service', priority: '0.5', changefreq: 'monthly' },
+      ];
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+      for (const p of staticPages) {
+        xml += '  <url>\n';
+        xml += `    <loc>${baseUrl}${p.loc}</loc>\n`;
+        xml += `    <lastmod>${now}</lastmod>\n`;
+        xml += `    <changefreq>${p.changefreq}</changefreq>\n`;
+        xml += `    <priority>${p.priority}</priority>\n`;
+        xml += '  </url>\n';
+      }
+
+      for (const prod of products) {
+        const lastmod = (prod.updated_at || prod.created_at || now).split('T')[0];
+        xml += '  <url>\n';
+        xml += `    <loc>${baseUrl}/products/${prod.id}</loc>\n`;
+        xml += `    <lastmod>${lastmod}</lastmod>\n`;
+        xml += '    <changefreq>weekly</changefreq>\n';
+        xml += '    <priority>0.8</priority>\n';
+        xml += '  </url>\n';
+      }
+
+      xml += '</urlset>';
+
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      return res.send(xml);
+    } catch {
+      return res.status(500).send('Unable to generate sitemap.');
+    }
   });
 
   const distDir = findDistPath();

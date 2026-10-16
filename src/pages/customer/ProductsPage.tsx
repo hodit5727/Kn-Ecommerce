@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
 import { Select } from '../../components/common/Select';
 import { Button } from '../../components/common/Button';
+import { SEOHead } from '../../components/seo/SEOHead';
 import {
   Filter,
   Search,
@@ -98,8 +99,27 @@ export const ProductsPage: React.FC = () => {
     setSearchParams({});
   };
 
+  const pageTitle = selectedCategory === 'All'
+    ? 'Fine Timepieces & Luxury Horology Catalog'
+    : `${selectedCategory} Collection`;
+  const pageDescription = selectedCategory === 'All'
+    ? 'Explore K-SHOP’s complete sovereign luxury catalog featuring master-crafted timepieces, haute horology, and accredited artisan accessories with COD escrow.'
+    : `Browse curated ${selectedCategory.toLowerCase()} on K-SHOP. 100% verified authenticity, campus delivery, and 7-day return guarantee.`;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <SEOHead
+        title={pageTitle}
+        description={pageDescription}
+        canonicalPath="/products"
+        jsonLd={{
+          '@type': 'CollectionPage',
+          name: pageTitle,
+          description: pageDescription,
+          url: 'https://kn-ecommerce-production.up.railway.app/products',
+        }}
+      />
+
       {/* Header & Page Title */}
       <div className="border-b border-cream-200 pb-6">
         <span className="text-xs font-bold uppercase tracking-widest text-burgundy block mb-1">

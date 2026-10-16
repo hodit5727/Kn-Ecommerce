@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShieldCheck, Truck, RotateCcw, Clock, Award } from 'lucide-react';
+import { openCookieSettingsModal } from '../common/CookieConsent';
 
 export const Footer: React.FC = () => {
   const location = useLocation();
@@ -114,22 +115,46 @@ export const Footer: React.FC = () => {
 
           <div>
             <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
-              Governance
+              Governance & Legal
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
-              <li><Link to="/admin" className="hover:text-burgundy">Admin Control Tower</Link></li>
-              <li><span className="text-stone-600">Cash on Delivery Terms</span></li>
-              <li><span className="text-stone-600">Horological Authenticity</span></li>
-              <li><span className="text-stone-600">Privacy & Ledger Records</span></li>
+              <li><Link to="/privacy-policy" className="hover:text-burgundy">Privacy Policy (GDPR)</Link></li>
+              <li><Link to="/terms-of-service" className="hover:text-burgundy">Terms of Service (COD)</Link></li>
+              <li><Link to="/faq" className="hover:text-burgundy">FAQ & Knowledgebase</Link></li>
+              <li><Link to="/contact" className="hover:text-burgundy">Legal & Campus Contact</Link></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={openCookieSettingsModal}
+                  className="hover:text-burgundy text-left text-xs text-stone-600 cursor-pointer"
+                >
+                  Cookie Preferences
+                </button>
+              </li>
+              <li><Link to="/admin" className="hover:text-burgundy text-stone-400">Admin Control Tower</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-cream-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-600">
+        <div className="mt-12 pt-8 border-t border-cream-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-600 gap-3">
           <p>© 2026 K-Shop Sovereign Marketplace. All rights reserved.</p>
-          <p className="mt-2 sm:mt-0 font-medium text-stone-600">
-            White/Ivory Palette • Deep Burgundy Identity • Cash on Delivery Only
-          </p>
+          <div className="flex items-center gap-3.5 text-xs text-stone-500 flex-wrap">
+            <Link to="/privacy-policy" className="hover:text-burgundy">Privacy</Link>
+            <span>•</span>
+            <Link to="/terms-of-service" className="hover:text-burgundy">Terms</Link>
+            <span>•</span>
+            <Link to="/contact" className="hover:text-burgundy">Contact</Link>
+            <span>•</span>
+            <Link to="/faq" className="hover:text-burgundy">FAQ</Link>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={openCookieSettingsModal}
+              className="hover:text-burgundy cursor-pointer"
+            >
+              Cookies
+            </button>
+          </div>
         </div>
       </div>
     </footer>

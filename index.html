@@ -19,19 +19,64 @@
 
     <!-- LCP_PRELOAD_SLOT -->
 
-    <!-- Google Fonts for Modern Luxury Typography (Non-render-blocking with swap) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
-    </noscript>
+    <!-- Canonical & Verification -->
+    <link rel="canonical" href="https://kn-ecommerce-production.up.railway.app/" />
+    <meta name="google-site-verification" content="google-site-verification=kshop-verification-production" />
+
+    <!-- Open Graph Social Metadata -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="K-SHOP Sovereign Luxury Marketplace" />
+    <meta property="og:title" content="K-SHOP | Sovereign Luxury Marketplace" />
+    <meta property="og:description" content="K-SHOP - Sovereign luxury marketplace. Connect directly with verified master horologists, jewelers, and atelier guilds with 100% Cash on Delivery escrow." />
+    <meta property="og:url" content="https://kn-ecommerce-production.up.railway.app/" />
+    <meta property="og:image" content="https://kn-ecommerce-production.up.railway.app/hero-water-scene.webp" />
+
+    <!-- Twitter / X Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@KShopLuxury" />
+    <meta name="twitter:title" content="K-SHOP | Sovereign Luxury Marketplace" />
+    <meta name="twitter:description" content="K-SHOP - Sovereign luxury marketplace with 100% Cash on Delivery escrow." />
+    <meta name="twitter:image" content="https://kn-ecommerce-production.up.railway.app/hero-water-scene.webp" />
+
+    <!-- Self-Hosted Local Font Preload (Zero 3rd-Party Calls, Instant Paint) -->
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Organization & WebSite Structured Data (Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://kn-ecommerce-production.up.railway.app/#organization",
+          "name": "K-SHOP Sovereign Luxury Marketplace",
+          "url": "https://kn-ecommerce-production.up.railway.app",
+          "logo": "https://kn-ecommerce-production.up.railway.app/favicon.svg",
+          "description": "Autonomous luxury marketplace connecting verified master ateliers with collectors via Cash on Delivery escrow.",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "support@kshop.ac.in",
+            "contactType": "customer service",
+            "availableLanguage": ["English", "Tamil"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://kn-ecommerce-production.up.railway.app/#website",
+          "url": "https://kn-ecommerce-production.up.railway.app",
+          "name": "K-SHOP",
+          "publisher": {
+            "@id": "https://kn-ecommerce-production.up.railway.app/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://kn-ecommerce-production.up.railway.app/products?search={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body class="bg-ivory text-stone-900 font-sans antialiased selection:bg-burgundy-100 selection:text-burgundy-900">
     <div id="root"></div>

@@ -28,6 +28,10 @@ const ProfilePage = lazy(() => import('../pages/customer/ProfilePage').then(m =>
 const BecomeSellerPage = lazy(() => import('../pages/customer/BecomeSellerPage').then(m => ({ default: m.BecomeSellerPage })));
 const SellerVerificationPage = lazy(() => import('../pages/customer/SellerVerificationPage').then(m => ({ default: m.SellerVerificationPage })));
 const SupportPage = lazy(() => import('../pages/customer/SupportPage').then(m => ({ default: m.SupportPage })));
+const FAQPage = lazy(() => import('../pages/customer/FAQPage').then(m => ({ default: m.FAQPage })));
+const PrivacyPolicyPage = lazy(() => import('../pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsOfServicePage = lazy(() => import('../pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
+const ContactPage = lazy(() => import('../pages/legal/ContactPage').then(m => ({ default: m.ContactPage })));
 const UnauthorizedPage = lazy(() => import('../pages/auth/UnauthorizedPage').then(m => ({ default: m.UnauthorizedPage })));
 
 // Seller Portal Pages (Lazy loaded only when /seller is accessed)
@@ -90,6 +94,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="/become-seller" element={<BecomeSellerPage />} />
         <Route path="/become-seller/verify" element={<SellerVerificationPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/faq" element={<FAQPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
 
       {/* Seller Portal Protected Routes */}

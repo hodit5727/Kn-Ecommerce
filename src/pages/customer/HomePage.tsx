@@ -5,6 +5,7 @@ import { Product } from '../../types/product';
 import { ProductCard } from '../../components/product/ProductCard';
 const QuickViewModal = React.lazy(() => import('../../components/product/QuickViewModal').then(m => ({ default: m.QuickViewModal })));
 import { ProductCardSkeleton } from '../../components/common/Skeleton';
+import { SEOHead } from '../../components/seo/SEOHead';
 import {
   ArrowRight,
   Sparkles,
@@ -74,6 +75,11 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-10 sm:space-y-16 pb-24">
+      <SEOHead
+        title="K-SHOP | Sovereign Luxury Marketplace"
+        description="Connect directly with verified master horologists, jewelers, and atelier guilds. Inspect each piece upon delivery and pay with 100% Cash on Delivery escrow."
+        canonicalPath="/"
+      />
       {/* ── 1. SOVEREIGN LUXURY HERO SECTION ───────────────────────────────── */}
       <section className="relative w-full overflow-hidden bg-[#FAF7F2] border-b border-cream-200/80 min-h-auto py-5 sm:py-10 lg:py-16 flex items-center">
         {/* Background Texture & Wash - Native high-priority image for optimal LCP discovery */}

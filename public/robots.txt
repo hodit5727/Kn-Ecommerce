@@ -1,0 +1,45 @@
+# robots.txt for K-SHOP Sovereign Luxury Marketplace
+# https://kn-ecommerce-production.up.railway.app
+
+User-agent: *
+Allow: /
+Allow: /products
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /contact
+Allow: /support
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /seller
+Disallow: /seller/*
+Disallow: /api
+Disallow: /api/*
+Disallow: /profile
+Disallow: /checkout
+Disallow: /orders/*
+
+# AI Search & Retrieval Crawlers (Generative Engine Optimization)
+User-agent: GPTBot
+Allow: /
+Disallow: /admin/*
+Disallow: /seller/*
+Disallow: /api/*
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/*
+Disallow: /seller/*
+Disallow: /api/*
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/*
+Disallow: /seller/*
+Disallow: /api/*
+
+User-agent: Google-Extended
+Allow: /
+
+# Sitemap Location
+Sitemap: https://kn-ecommerce-production.up.railway.app/sitemap.xml

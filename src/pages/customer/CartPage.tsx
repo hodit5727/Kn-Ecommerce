@@ -5,6 +5,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../../components/common/Button';
 import { formatINR } from '../../lib/currency';
+import { SEOHead } from '../../components/seo/SEOHead';
 import {
   Trash2,
   Plus,
@@ -37,6 +38,12 @@ export const CartPage: React.FC = () => {
   if (!isAuthenticated || !user) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <SEOHead
+          title="Acquisition Bag"
+          description="Sign in to view your reserved luxury timepieces and access escrow checkout on K-SHOP."
+          canonicalPath="/cart"
+          noindex={true}
+        />
         <div className="w-20 h-20 rounded-3xl bg-amber-50 border border-amber-200 flex items-center justify-center text-burgundy mx-auto mb-6 shadow-soft">
           <ShieldCheck className="w-10 h-10 text-burgundy" />
         </div>
@@ -56,6 +63,12 @@ export const CartPage: React.FC = () => {
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <SEOHead
+          title="Acquisition Bag"
+          description="Your acquisition bag is currently empty. Explore the sovereign collection to reserve artifacts."
+          canonicalPath="/cart"
+          noindex={true}
+        />
         <div className="w-20 h-20 rounded-3xl bg-cream-100 flex items-center justify-center text-burgundy mx-auto mb-6 shadow-soft">
           <PackageOpen className="w-10 h-10" />
         </div>
@@ -75,6 +88,12 @@ export const CartPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <SEOHead
+        title="Acquisition Bag"
+        description="Review your reserved artisan artifacts and proceed to escrow checkout."
+        canonicalPath="/cart"
+        noindex={true}
+      />
       {/* Title */}
       <div className="border-b border-cream-200 pb-6">
         <span className="text-xs font-bold uppercase tracking-widest text-burgundy block mb-1">

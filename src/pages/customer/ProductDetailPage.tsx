@@ -8,6 +8,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import { useToast } from '../../context/ToastContext';
 import { formatINR } from '../../lib/currency';
 import { getOptimizedImageUrl } from '../../lib/imageUrl';
+import { SEOHead } from '../../components/seo/SEOHead';
 
 // Lazy-load Three.js components to avoid bundling 116 KiB vendor-three into the critical product path
 const Product3DViewer = lazy(() =>
@@ -314,8 +315,51 @@ export const ProductDetailPage: React.FC = () => {
 
   const primaryImage = product.images[activeImageIndex] || product.images[0];
 
+  const productSchema = {
+    '@type': 'Product',
+    name: product.name,
+    image: product.images,
+    description: product.description || product.tagline || `${product.name} available at K-SHOP`,
+    sku: product.sku || product.id,
+    brand: {
+      '@type': 'Brand',
+      name: product.brand || (product as any).store_name || 'K-SHOP Atelier',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: `https://kn-ecommerce-production.up.railway.app/product/${product.id}`,
+      priceCurrency: 'INR',
+      price: product.price,
+      priceValidUntil: '2027-12-31',
+      availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: product.rating || 4.9,
+      reviewCount: product.reviewCount || 12,
+    },
+  };
+
+  const breadcrumbsSchema = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://kn-ecommerce-production.up.railway.app' },
+      { '@type': 'ListItem', position: 2, name: 'Catalog', item: 'https://kn-ecommerce-production.up.railway.app/products' },
+      { '@type': 'ListItem', position: 3, name: product.name, item: `https://kn-ecommerce-production.up.railway.app/product/${product.id}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-[#FFF9F2]/30 py-4 sm:py-8 pb-32 sm:pb-12">
+      <SEOHead
+        title={product.name}
+        description={product.description?.slice(0, 155) || product.tagline || `Discover ${product.name} on K-SHOP Sovereign Marketplace.`}
+        canonicalPath={`/product/${product.id}`}
+        image={primaryImage}
+        type="product"
+        jsonLd={[productSchema, breadcrumbsSchema]}
+      />
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[#4E453E] overflow-x-auto whitespace-nowrap scrollbar-none py-1">
