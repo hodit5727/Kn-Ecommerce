@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -29,6 +29,23 @@ export const SellerLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    if (isMobileMenuOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
 
   const navigation = [
     { name: 'Overview', href: '/seller', icon: LayoutDashboard },
@@ -49,7 +66,6 @@ export const SellerLayout: React.FC = () => {
     navigate('/');
   };
 
-
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col md:flex-row text-stone-900">
       {/* Mobile Header */}
@@ -58,6 +74,7 @@ export const SellerLayout: React.FC = () => {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 rounded-lg text-stone-600 hover:bg-stone-100"
+            aria-label="Toggle Sidebar"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -76,20 +93,55 @@ export const SellerLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Desktop Sidebar */}
+      {/* Mobile Backdrop Overlay - closes and shrinks sidebar when touching or clicking outside on the right */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          onTouchStart={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-30 md:hidden transition-opacity cursor-pointer animate-in fade-in duration-200"
+          aria-label="Close sidebar overlay"
+        />
+      )}
+
+      {/* Desktop / Mobile Sidebar */}
       <aside
+        onTouchStart={(e) => {
+          touchStartX.current = e.touches[0].clientX;
+        }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current !== null) {
+            const diff = touchStartX.current - e.changedTouches[0].clientX;
+            if (diff > 50) {
+              // Swiped left by at least 50px -> shrink/close sidebar
+              setIsMobileMenuOpen(false);
+            }
+            touchStartX.current = null;
+          }
+        }}
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-cream-200 flex flex-col transform transition-transform duration-200 ease-in-out md:translate-x-0 md:static ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand & Store Header */}
         <div className="p-6 border-b border-cream-200 bg-ivory">
-          <Link to="/" className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-lg bg-burgundy flex items-center justify-center text-white font-serif font-bold text-sm">
-              K
-            </div>
-            <span className="font-serif font-extrabold text-stone-900 text-base">K-SHOP LUXURY</span>
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-burgundy flex items-center justify-center text-white font-serif font-bold text-sm">
+                K
+              </div>
+              <span className="font-serif font-extrabold text-stone-900 text-base">K-SHOP LUXURY</span>
+            </Link>
+            {/* Mobile Drawer Close/Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden p-1.5 rounded-xl text-stone-500 hover:text-stone-900 hover:bg-cream-200 transition-colors"
+              aria-label="Close Sidebar"
+              title="Close Sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cream-200 text-burgundy flex items-center justify-center font-bold font-serif text-base border border-cream-300">
               <Store className="w-5 h-5" />

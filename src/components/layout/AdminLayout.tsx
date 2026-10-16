@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -33,8 +33,25 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
 
-  React.useEffect(() => {
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    if (isMobileMenuOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
     if (!IS_UI_PREVIEW && !user) {
       navigate('/admin/login', { replace: true, state: { from: location } });
     }
@@ -61,7 +78,6 @@ export const AdminLayout: React.FC = () => {
     navigate('/');
   };
 
-
   return (
     <div className="min-h-screen bg-stone-100/70 flex flex-col md:flex-row text-stone-900">
       {/* Mobile Header */}
@@ -70,6 +86,7 @@ export const AdminLayout: React.FC = () => {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 rounded-lg text-stone-600 hover:bg-stone-100"
+            aria-label="Toggle Sidebar"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -91,26 +108,61 @@ export const AdminLayout: React.FC = () => {
         </button>
       </div>
 
-      {/* Desktop Sidebar */}
+      {/* Mobile Backdrop Overlay - closes and shrinks sidebar when touching or clicking outside on the right */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          onTouchStart={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-30 md:hidden transition-opacity cursor-pointer animate-in fade-in duration-200"
+          aria-label="Close sidebar overlay"
+        />
+      )}
+
+      {/* Desktop / Mobile Sidebar */}
       <aside
+        onTouchStart={(e) => {
+          touchStartX.current = e.touches[0].clientX;
+        }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current !== null) {
+            const diff = touchStartX.current - e.changedTouches[0].clientX;
+            if (diff > 50) {
+              // Swiped left by at least 50px -> shrink/close sidebar
+              setIsMobileMenuOpen(false);
+            }
+            touchStartX.current = null;
+          }
+        }}
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-stone-200 flex flex-col transform transition-transform duration-200 ease-in-out md:translate-x-0 md:static ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
         <div className="p-5 border-b border-stone-800 bg-stone-900 text-white">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-burgundy flex items-center justify-center text-white font-serif font-bold text-sm border border-burgundy-400">
-              <ShieldCheck className="w-5 h-5 text-amber-300" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-burgundy flex items-center justify-center text-white font-serif font-bold text-sm border border-burgundy-400">
+                <ShieldCheck className="w-5 h-5 text-amber-300" />
+              </div>
+              <div>
+                <span className="font-serif font-extrabold text-base tracking-wider block leading-none">
+                  K-SHOP ADMIN
+                </span>
+                <span className="text-[9px] uppercase tracking-widest text-amber-300 font-bold block mt-1">
+                  Admin Portal
+                </span>
+              </div>
             </div>
-            <div>
-              <span className="font-serif font-extrabold text-base tracking-wider block leading-none">
-                K-SHOP ADMIN
-              </span>
-              <span className="text-[9px] uppercase tracking-widest text-amber-300 font-bold block mt-1">
-                Admin Portal
-              </span>
-            </div>
+            {/* Mobile Drawer Close/Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+              aria-label="Close Sidebar"
+              title="Close Sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
           {/* Admin Email & Privilege Tag */}
           <div className="p-2 rounded-xl bg-stone-800/80 border border-stone-700 flex items-center justify-between text-[11px]">
