@@ -269,8 +269,8 @@ export const Navbar: React.FC = () => {
                 </Link>
               )}
 
-              {/* Notification Bell (Hidden on small mobile) */}
-              <div className="relative hidden sm:block">
+              {/* Notification Bell (Accessible on Mobile & Desktop) */}
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => {

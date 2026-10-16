@@ -108,10 +108,10 @@ export const SellerOrdersPage: React.FC = () => {
                 <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
                   <th className="py-4 px-5">Order ID</th>
                   <th className="py-4 px-4">Date</th>
-                  <th className="py-4 px-4">Customer Name</th>
+                  <th className="py-4 px-4">Customer Ref</th>
                   <th className="py-4 px-4">Product ID & Name</th>
                   <th className="py-4 px-4">Price & Qty</th>
-                  <th className="py-4 px-4">Delivery Location</th>
+                  <th className="py-4 px-4">Delivery Logistics</th>
                   <th className="py-4 px-5 text-right">Delivery Progress</th>
                 </tr>
               </thead>
@@ -142,15 +142,12 @@ export const SellerOrdersPage: React.FC = () => {
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
 
-                      {/* Customer Name */}
+                      {/* Customer Ref (Privacy-protected: no raw name/phone) */}
                       <td className="py-4 px-4">
-                        <p className="font-semibold text-stone-900 text-xs">{order.customerName}</p>
-                        {order.customerBusinessId && (
-                          <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 font-mono text-[10px]">
-                            {order.customerBusinessId}
-                          </span>
-                        )}
-                        <p className="text-[10px] text-stone-400 mt-0.5">{order.customerPhone}</p>
+                        <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-800 font-mono text-[11px] font-bold">
+                          {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
+                        </span>
+                        <p className="text-[10px] text-stone-400 mt-1">Campus Patron</p>
                       </td>
 
                       {/* Product ID & Name */}
@@ -180,16 +177,14 @@ export const SellerOrdersPage: React.FC = () => {
                         </p>
                       </td>
 
-                      {/* Delivery Location (Campus & Dept) */}
+                      {/* Delivery Logistics (Managed by Admin) */}
                       <td className="py-4 px-4 text-stone-600 text-xs max-w-xs">
                         <p className="font-medium text-stone-900 truncate">
-                          {order.shippingAddress?.streetAddress || 'Campus Delivery'}
+                          Campus Fulfillment Hub
                         </p>
-                        {order.shippingAddress?.apartmentSuite && order.shippingAddress.apartmentSuite !== 'Campus Delivery' && (
-                          <p className="text-[10px] text-stone-400 truncate">
-                            {order.shippingAddress.apartmentSuite}
-                          </p>
-                        )}
+                        <p className="text-[10px] text-stone-400 truncate">
+                          Managed by Admin Delivery
+                        </p>
                       </td>
 
                       {/* Admin Delivery Progress */}

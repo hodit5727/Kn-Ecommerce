@@ -43,6 +43,7 @@ import { createSellerVerificationRouter } from './routes/sellerVerification.js';
 import { createAdminVerificationRouter } from './routes/adminVerification.js';
 import { createFaceVerificationProvider } from './lib/faceVerification/index.js';
 import { createFrameCache } from './lib/verification/frames.js';
+import { publicImageUrls } from './lib/productShape.js';
 import compression from 'compression';
 import { notFoundHandler, createErrorHandler } from './lib/errors.js';
 import { recordIncident } from './lib/alerting.js';
@@ -174,43 +175,52 @@ export function createApp({ env, supabase, verification = null }) {
 
       // Dynamic LCP image discovery for /products/:id
       const productMatch = req.path.match(/^\/products\/([0-9a-fA-F-]{36})$/);
-      if (productMatch && supabase && typeof supabase.from === 'function') {
+      const dbClient = supabase?.service || supabase;
+      if (productMatch && dbClient && typeof dbClient.from === 'function') {
         const productId = productMatch[1];
         let cached = lcpImageCache.get(productId);
         const now = Date.now();
 
         if (!cached || cached.expiresAt < now) {
           try {
-            const { data } = await supabase
+            const { data } = await dbClient
               .from('products')
-              .select('images')
+              .select(`
+                id, verification_meta,
+                images:product_images(storage_bucket, storage_path, position, is_primary)
+              `)
               .eq('id', productId)
               .maybeSingle();
 
-            if (data?.images?.[0]) {
-              const rawImg = data.images[0];
-              let optUrl = rawImg;
-              let opt400 = rawImg;
-              let opt1200 = rawImg;
-              if (typeof rawImg === 'string' && rawImg.includes('/storage/v1/object/public/')) {
-                const base = rawImg.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-                const sep = base.includes('?') ? '&' : '?';
-                optUrl = `${base}${sep}width=800&quality=80`;
-                opt400 = `${base}${sep}width=400&quality=80`;
-                opt1200 = `${base}${sep}width=1200&quality=85`;
+            if (data) {
+              const imageBase = env?.SUPABASE_URL || 'https://dzyckrjvwbhfmgrxbjuk.supabase.co';
+              const urls = publicImageUrls(data, imageBase);
+              const rawImg = urls[0];
+
+              if (rawImg) {
+                let optUrl = rawImg;
+                let opt400 = rawImg;
+                let opt1200 = rawImg;
+                if (typeof rawImg === 'string' && rawImg.includes('/storage/v1/object/public/')) {
+                  const base = rawImg.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+                  const sep = base.includes('?') ? '&' : '?';
+                  optUrl = `${base}${sep}width=800&quality=80`;
+                  opt400 = `${base}${sep}width=400&quality=80`;
+                  opt1200 = `${base}${sep}width=1200&quality=85`;
+                }
+                const srcSet = `${opt400} 400w, ${optUrl} 800w, ${opt1200} 1200w`;
+                const preloadTag = `<link rel="preload" as="image" href="${optUrl}" imagesrcset="${srcSet}" imagesizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px" fetchpriority="high" />`;
+                cached = {
+                  preloadTag,
+                  imgUrl: optUrl,
+                  expiresAt: now + LCP_CACHE_TTL_MS,
+                };
+                if (lcpImageCache.size >= MAX_LCP_CACHE) {
+                  const firstKey = lcpImageCache.keys().next().value;
+                  if (firstKey) lcpImageCache.delete(firstKey);
+                }
+                lcpImageCache.set(productId, cached);
               }
-              const srcSet = `${opt400} 400w, ${optUrl} 800w, ${opt1200} 1200w`;
-              const preloadTag = `<link rel="preload" as="image" href="${optUrl}" imagesrcset="${srcSet}" imagesizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px" fetchpriority="high" />`;
-              cached = {
-                preloadTag,
-                imgUrl: optUrl,
-                expiresAt: now + LCP_CACHE_TTL_MS,
-              };
-              if (lcpImageCache.size >= MAX_LCP_CACHE) {
-                const firstKey = lcpImageCache.keys().next().value;
-                if (firstKey) lcpImageCache.delete(firstKey);
-              }
-              lcpImageCache.set(productId, cached);
             }
           } catch {
             // Graceful fallback to default index.html
@@ -218,13 +228,12 @@ export function createApp({ env, supabase, verification = null }) {
         }
 
         if (cached?.preloadTag && indexHtmlTemplate) {
-          res.setHeader('Link', `${baseLinkHeader}, <${cached.imgUrl}>; rel=preload; as=image; fetchpriority=high`);
+          res.setHeader('Link', `<${cached.imgUrl}>; rel=preload; as=image; fetchpriority=high`);
           const html = indexHtmlTemplate.replace('<!-- LCP_PRELOAD_SLOT -->', cached.preloadTag);
           return res.type('html').send(html);
         }
       }
 
-      res.setHeader('Link', baseLinkHeader);
       return res.sendFile(indexHtmlPath);
     });
   } else {

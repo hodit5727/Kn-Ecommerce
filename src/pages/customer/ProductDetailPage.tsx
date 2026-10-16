@@ -271,24 +271,39 @@ export const ProductDetailPage: React.FC = () => {
                 <div className="h-7 w-4/5 bg-stone-200 rounded animate-pulse" />
                 <div className="h-4 w-3/5 bg-stone-200/70 rounded animate-pulse" />
               </div>
-              <div className="h-20 w-full rounded-xl bg-[#FFF9F2] border border-[#E8DCCF] animate-pulse" />
-              <div className="h-10 w-full rounded-xl bg-stone-100 animate-pulse" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className="h-11 rounded-xl bg-stone-200 animate-pulse" />
-                <div className="h-11 rounded-xl bg-[#8F0025]/30 animate-pulse" />
+
+              {/* Price Box Skeleton */}
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#FFF9F2] border border-[#E8DCCF] space-y-2.5">
+                <div className="h-8 w-36 bg-stone-200 rounded animate-pulse" />
+                <div className="pt-2 border-t border-[#E8DCCF] flex items-center justify-between">
+                  <div className="h-3 w-28 bg-stone-200/80 rounded animate-pulse" />
+                  <div className="h-3 w-36 bg-stone-200/80 rounded animate-pulse" />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="h-10 rounded-xl bg-stone-100 animate-pulse" />
-                <div className="h-10 rounded-xl bg-stone-100 animate-pulse" />
+
+              {/* Actions & Quantity Skeleton matching real space-y-3 */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-8 w-28 rounded-lg bg-stone-100 border border-[#E8DCCF] animate-pulse" />
+                  <div className="h-6 w-32 rounded-full bg-emerald-50 border border-emerald-200/60 animate-pulse" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="h-11 sm:h-12 rounded-xl bg-[#8F0025]/30 animate-pulse" />
+                  <div className="h-11 sm:h-12 rounded-xl bg-[#FFF9F2] border-2 border-[#8F0025]/30 animate-pulse" />
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="h-10 rounded-xl bg-white border border-[#E8DCCF] animate-pulse" />
+                  <div className="h-10 rounded-xl bg-white border border-[#E8DCCF] animate-pulse" />
+                </div>
               </div>
 
               {/* Seller Skeleton inside card */}
-              <div className="p-3.5 sm:p-4 rounded-xl bg-[#FFF9F2]/70 border border-[#E8DCCF] h-16 animate-pulse" />
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#FFF9F2]/70 border border-[#E8DCCF] h-[78px] animate-pulse" />
 
               {/* Delivery Protocols Skeleton inside card */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="h-10 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
-                <div className="h-10 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="h-9 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
+                <div className="h-9 rounded-lg bg-[#FFF9F2]/50 border border-[#E8DCCF] animate-pulse" />
               </div>
             </div>
           </div>

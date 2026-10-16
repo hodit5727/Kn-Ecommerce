@@ -41,8 +41,11 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { grantSellerAccess } from '../lib/sellerAccess.js';
 import { writeAudit } from '../lib/audit.js';
 import { productToPublic, formatProductCode } from '../lib/productShape.js';
-import { VERIFICATION_DOCS_BUCKET, SELLER_DOCUMENTS_BUCKET } from '../lib/uploads.js';
-import { sendProductReviewedSellerEmail } from '../lib/mail.js';
+import {
+  sendProductReviewedSellerEmail,
+  sendSellerRejectedEmail,
+  sendSettlementReleasedSellerEmail,
+} from '../lib/mail.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NON_VOIDED_ORDER_STATUSES = new Set([
@@ -432,6 +435,27 @@ export function createAdminManagementRouter({ env, supabase }) {
         console.error('[admin] seller reject failed:', rejectError.message);
         throw httpError(502, 'Unable to process the application. Please try again.');
       }
+
+      // Trigger seller application rejection email (non-blocking)
+      (async () => {
+        try {
+          const { data: targetProfile } = await supabase.service
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', id)
+            .maybeSingle();
+          if (targetProfile?.email) {
+            await sendSellerRejectedEmail(env, {
+              to: targetProfile.email,
+              fullName: targetProfile.full_name,
+              storeName: target.store_name,
+              reason: String(req.body?.reason ?? '').trim() || 'Application does not meet current verification requirements.',
+            });
+          }
+        } catch (mailErr) {
+          console.warn('[admin/sellers] reject email error:', mailErr?.message || mailErr);
+        }
+      })();
     }
 
     await writeAudit(supabase, {
@@ -1089,7 +1113,11 @@ export function createAdminManagementRouter({ env, supabase }) {
     }
 
     const now = new Date().toISOString();
-    const netAmount = Math.max(0, (Number(found.amount) || 0) - (Number(found.commission_amount) || 0));
+    const grossAmount = Number(found.amount) || 0;
+    const commAmount = found.commission_amount !== undefined && found.commission_amount !== null
+      ? Number(found.commission_amount)
+      : Math.round(grossAmount * 0.05 * 100) / 100;
+    const netAmount = Math.max(0, Math.round((grossAmount - commAmount) * 100) / 100);
     const bankRef =
       typeof req.body?.bankReference === 'string' && req.body.bankReference.trim()
         ? req.body.bankReference.trim()
@@ -1112,7 +1140,7 @@ export function createAdminManagementRouter({ env, supabase }) {
       throw httpError(502, 'Unable to release settlement payout.');
     }
 
-    // 2. Ledger DEBIT entry in transactions table
+    // 2. Double-entry ledger: PAYOUT debit (95%) + COMMISSION credit (5%)
     try {
       const { data: allTxns } = await supabase.service.from('transactions').select('balance_after');
       const prevBalance = (allTxns ?? []).reduce((max, t) => Math.max(max, Number(t.balance_after) || 0), 0);
@@ -1121,6 +1149,7 @@ export function createAdminManagementRouter({ env, supabase }) {
       const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
       const txnRef = `TXN-${cryptoTxnDigits}`;
 
+      // (a) Payout wire debit to seller
       await supabase.service.from('transactions').insert({
         id: crypto.randomUUID(),
         txn_ref: txnRef,
@@ -1141,10 +1170,74 @@ export function createAdminManagementRouter({ env, supabase }) {
         },
         created_at: now,
       });
+
+      // (b) Platform commission fee credit (5%)
+      if (commAmount > 0) {
+        await supabase.service.from('transactions').insert({
+          id: crypto.randomUUID(),
+          txn_ref: `TXN-${String(crypto.randomInt(1000000000, 10000000000))}`,
+          order_id: found.order_id,
+          seller_id: found.seller_id,
+          txn_type: 'COMMISSION',
+          entry: 'CREDIT',
+          amount: commAmount,
+          commission_amount: commAmount,
+          refund_amount: 0,
+          payout_amount: 0,
+          balance_after: newBalance,
+          status: 'POSTED',
+          actor_id: req.auth.profile.id,
+          metadata: {
+            note: `Platform fee (5%) retained from settlement`,
+            bankReference: bankRef,
+          },
+          created_at: now,
+        });
+      }
+
+      // (c) Mandatory notification announcement to the seller
+      await supabase.service.from('announcements').insert({
+        id: crypto.randomUUID(),
+        title: `Settlement Wire Released: ₹${netAmount}`,
+        message: `Your settlement payout of ₹${netAmount} (after 5% platform fee of ₹${commAmount}) has been wired to your bank. Bank reference: ${bankRef}.`,
+        type: 'SUCCESS',
+        audience: 'SELLER',
+        is_active: true,
+        created_at: now,
+      });
     } catch (txnErr) {
       // eslint-disable-next-line no-console
       console.error('[admin/settlements] ledger debit failed:', txnErr?.message ?? txnErr);
     }
+
+    // 3. Dispatch settlement email to seller (non-blocking)
+    (async () => {
+      try {
+        const { data: sProfile } = await supabase.service
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', found.seller_id)
+          .maybeSingle();
+        const { data: storeRow } = await supabase.service
+          .from('seller_profiles')
+          .select('store_name')
+          .eq('profile_id', found.seller_id)
+          .maybeSingle();
+
+        if (sProfile?.email) {
+          await sendSettlementReleasedSellerEmail(env, {
+            to: sProfile.email,
+            storeName: storeRow?.store_name || sProfile.full_name || 'Artisan Partner',
+            settlementAmount: grossAmount,
+            commissionAmount: commAmount,
+            netPayout: netAmount,
+            bankReference: bankRef,
+          });
+        }
+      } catch (mailErr) {
+        console.warn('[admin/settlements] seller email notification error:', mailErr?.message || mailErr);
+      }
+    })();
 
     await writeAudit(supabase, {
       actorId: req.auth.profile.id,

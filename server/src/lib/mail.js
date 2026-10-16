@@ -633,3 +633,72 @@ export async function sendProductReviewedSellerEmail(env, { to, productName, sta
     return null;
   }
 }
+
+/**
+ * Send seller application rejection notification email.
+ */
+export async function sendSellerRejectedEmail(env, { to, fullName, storeName, reason }) {
+  try {
+    if (!env?.SMTP?.host || !to) return null;
+    const t = getTransport(env);
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #fff1f2; border-radius: 14px; border: 1px solid #fecdd3;">
+        <h2 style="color: #be123c; font-size: 18px; margin: 0 0 10px;">Seller Application Status: Rejected</h2>
+        <p style="font-size: 13px; color: #4c0519; line-height: 1.5; margin: 0 0 12px;">
+          Hello <strong>${fullName || 'Artisan'}</strong>, thank you for your interest in becoming a merchant for <strong>${storeName || 'your store'}</strong> on K-SHOP.
+        </p>
+        <p style="font-size: 12px; color: #881337; margin: 0 0 8px;"><strong>Decision Reason:</strong> ${reason || 'Application does not meet current verification requirements.'}</p>
+        <p style="font-size: 11px; color: #9f1239; margin: 0;">You may re-apply with updated identity and accreditation documentation through your account dashboard.</p>
+      </div>
+    `;
+
+    return await t.sendMail({
+      from: { name: env.SMTP.fromName || 'K-Shop Merchant Accreditation', address: env.SMTP.from || env.SMTP.user },
+      to,
+      subject: `Seller Application Status Update — ${storeName || 'K-SHOP'}`,
+      html,
+      text: `Hello ${fullName || 'Artisan'}, your seller application for ${storeName || 'your store'} was not approved. Reason: ${reason || 'Application does not meet current verification requirements.'}`,
+    });
+  } catch (err) {
+    console.warn('[mail] Failed seller rejection email:', err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * Send wire settlement payout notification email to the seller.
+ */
+export async function sendSettlementReleasedSellerEmail(env, { to, storeName, settlementAmount, commissionAmount, netPayout, bankReference }) {
+  try {
+    if (!env?.SMTP?.host || !to) return null;
+    const t = getTransport(env);
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #ecfdf5; border-radius: 14px; border: 1px solid #a7f3d0;">
+        <h2 style="color: #065f46; font-size: 18px; margin: 0 0 10px;">🏦 Settlement Wire Payout Released</h2>
+        <p style="font-size: 13px; color: #064e3b; line-height: 1.5; margin: 0 0 14px;">
+          Hello <strong>${storeName}</strong>, your campus marketplace settlement wire has been processed and disbursed.
+        </p>
+        <div style="background: #ffffff; padding: 16px; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 14px; font-size: 12px;">
+          <p style="margin: 0 0 6px; color: #047857;">Gross Amount: <strong>₹${settlementAmount}</strong></p>
+          <p style="margin: 0 0 6px; color: #047857;">Platform Commission (5%): <strong>₹${commissionAmount}</strong></p>
+          <p style="margin: 0 0 6px; font-size: 15px; font-weight: bold; color: #065f46;">Net Payout Wired (95%): ₹${netPayout}</p>
+          <p style="margin: 0; color: #6b7280; font-family: monospace;">Bank Reference: ${bankReference}</p>
+        </div>
+        <p style="font-size: 12px; color: #047857; margin: 0;">Funds should reflect in your registered bank account within 1-2 banking hours. Thank you for your partnership with K-SHOP.</p>
+      </div>
+    `;
+
+    return await t.sendMail({
+      from: { name: env.SMTP.fromName || 'K-Shop Settlements', address: env.SMTP.from || env.SMTP.user },
+      to,
+      subject: `Settlement Disbursed: ₹${netPayout} (Wire Ref: ${bankReference}) — K-SHOP`,
+      html,
+      text: `Hello ${storeName}, your settlement payout of ₹${netPayout} (gross ₹${settlementAmount} minus ₹${commissionAmount} 5% platform fee) has been released. Bank Reference: ${bankReference}.`,
+    });
+  } catch (err) {
+    console.warn('[mail] Failed seller settlement email:', err?.message || err);
+    return null;
+  }
+}

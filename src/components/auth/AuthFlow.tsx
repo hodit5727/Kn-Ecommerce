@@ -17,7 +17,7 @@
  * no bypassed OTP, and no locally-trusted identity.
  */
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../common/Button';
@@ -126,6 +126,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
   } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [step, setStep] = useState<Step>(1);
   const [requiresProfile, setRequiresProfile] = useState(false);
@@ -326,9 +327,16 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
 
   const finish = (profile: UserProfile) => {
     clearPendingFlow();
-    const destination =
-      profile.role === 'ADMIN' ? '/admin' : profile.role === 'SELLER' ? '/seller' : '/profile';
-    navigate(destination);
+    if (profile.role === 'ADMIN') {
+      navigate('/admin');
+    } else if (profile.role === 'SELLER') {
+      navigate('/seller');
+    } else {
+      // CUSTOMER: If inside modal (onFinished provided) or on storefront page, stay on current page
+      if (!onFinished && location.pathname === '/login') {
+        navigate('/profile');
+      }
+    }
     onFinished?.();
   };
 

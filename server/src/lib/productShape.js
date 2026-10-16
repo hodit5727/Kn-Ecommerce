@@ -58,7 +58,7 @@ export function resolveImageUrl(img, imageBase = '') {
 }
 
 /** Public storage URLs: primary first, then position order. */
-function publicImageUrls(row, imageBase) {
+export function publicImageUrls(row, imageBase) {
   if (!Array.isArray(row?.images)) return [];
   const images = row.images.slice().sort((a, b) => {
     const primary = Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary));
