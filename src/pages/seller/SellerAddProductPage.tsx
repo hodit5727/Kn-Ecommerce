@@ -778,7 +778,7 @@ export const SellerAddProductPage: React.FC = () => {
       {currentStep === 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (5 cols): Live Visual Preview & Gallery (Sticky) */}
-          <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6 lg:self-start space-y-4">
+          <div className="order-2 lg:order-1 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-6 lg:self-start space-y-4">
             <div className="bg-white rounded-3xl p-5 border border-cream-200 shadow-soft space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-cream-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-burgundy flex items-center gap-1.5">
@@ -874,7 +874,7 @@ export const SellerAddProductPage: React.FC = () => {
           </div>
 
           {/* Right Column (7/8 cols): Upload Dropzone & AI Scanner Trigger */}
-          <div className="lg:col-span-7 xl:col-span-8 min-w-0 space-y-6">
+          <div className="order-1 lg:order-2 lg:col-span-7 xl:col-span-8 min-w-0 space-y-6">
             {/* Upload Drop Area */}
             <div
               onDragEnter={handleDrag}
@@ -926,7 +926,7 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* AI Vision Scanner Action Box */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-cream-100">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
@@ -1048,7 +1048,7 @@ export const SellerAddProductPage: React.FC = () => {
       {currentStep === 2 && (
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (4/5 cols): Sticky Product Preview (Static, pins on screen while right side scrolls) */}
-          <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <div className="order-2 lg:order-1 lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-6 lg:self-start">
             <div className="bg-white rounded-3xl p-5 border border-cream-200 shadow-soft space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-cream-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-burgundy">
@@ -1161,15 +1161,15 @@ export const SellerAddProductPage: React.FC = () => {
           </div>
 
           {/* Right Column (7/8 cols): Clean Details Form & Extracted Attributes (Scrollable) */}
-          <div className="lg:col-span-7 xl:col-span-8 min-w-0 space-y-6 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:pr-3 lg:scroll-smooth">
+          <div className="order-1 lg:order-2 lg:col-span-7 xl:col-span-8 min-w-0 space-y-6 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:pr-3 lg:scroll-smooth">
             {/* 1. Basic Information */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
               <h3 className="font-serif font-bold text-base text-stone-900 pb-3 border-b border-cream-100 flex items-center gap-2">
                 <Package className="w-4 h-4 text-burgundy" /> 1. Basic Information
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="col-span-2">
                   <Input
                     label="Product Title / Name"
                     placeholder="e.g. Fossil Men's Classic Leather Watch"
@@ -1190,7 +1190,7 @@ export const SellerAddProductPage: React.FC = () => {
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
                 />
-                <div className="sm:col-span-2">
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold tracking-wide text-stone-700 mb-1.5 uppercase">
                     Product Color
                   </label>
@@ -1224,7 +1224,7 @@ export const SellerAddProductPage: React.FC = () => {
                     Product color specified by seller for single product or default display.
                   </span>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold tracking-wide text-stone-700 mb-1.5 uppercase">
                     Description
                   </label>
@@ -1240,12 +1240,12 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* 2. Category Intelligence */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
               <h3 className="font-serif font-bold text-base text-stone-900 pb-3 border-b border-cream-100 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-burgundy" /> 2. Category & Classification
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <Select
                   label="Main Category"
                   value={category}
@@ -1268,7 +1268,7 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* 3. Pricing, Discount & Inventory */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-cream-100 flex-wrap gap-2">
                 <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2">
                   <IndianRupee className="w-4 h-4 text-burgundy" /> 3. Pricing, Discount & Inventory
@@ -1282,10 +1282,10 @@ export const SellerAddProductPage: React.FC = () => {
               </div>
 
               {/* Interactive Price & Discount Box */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-cream-50/70 border border-cream-200 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-3 sm:p-5 rounded-2xl bg-cream-50/70 border border-cream-200 space-y-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   {/* Original MRP */}
-                  <div>
+                  <div className="min-w-0">
                     <Input
                       label="Original Price / MRP (₹)"
                       type="number"
@@ -1298,7 +1298,7 @@ export const SellerAddProductPage: React.FC = () => {
                   </div>
 
                   {/* Discount % */}
-                  <div>
+                  <div className="min-w-0">
                     <Input
                       label="Discount %"
                       type="number"
@@ -1328,7 +1328,7 @@ export const SellerAddProductPage: React.FC = () => {
                   </div>
 
                   {/* Final Selling Price */}
-                  <div>
+                  <div className="min-w-0">
                     <Input
                       label="Final Selling Price (₹)"
                       type="number"
@@ -1348,7 +1348,7 @@ export const SellerAddProductPage: React.FC = () => {
               </div>
 
               {/* Stock and SKU */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Input
                   label="Stock Units"
                   type="number"
@@ -1366,7 +1366,7 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* 4. AI-EXTRACTED ATTRIBUTES (Replaces the old 10-box static UI) */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-cream-100 flex-wrap gap-2">
                 <div>
                   <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2">
@@ -1390,14 +1390,14 @@ export const SellerAddProductPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {Object.entries(attributesState).map(([key, item]) => (
                     <div
                       key={key}
-                      className="p-3 rounded-2xl bg-cream-50/70 border border-cream-200 space-y-1 relative group"
+                      className="p-3 rounded-2xl bg-cream-50/70 border border-cream-200 space-y-1 relative group min-w-0"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-stone-600 uppercase tracking-wide">
+                        <span className="text-[11px] font-bold text-stone-600 uppercase tracking-wide truncate">
                           {key.replace(/_/g, ' ')}
                         </span>
                         <button
@@ -1407,7 +1407,7 @@ export const SellerAddProductPage: React.FC = () => {
                             delete next[key];
                             setAttributesState(next);
                           }}
-                          className="text-stone-400 hover:text-red-500 p-0.5 opacity-60 group-hover:opacity-100 transition-opacity"
+                          className="text-stone-400 hover:text-red-500 p-0.5 opacity-60 group-hover:opacity-100 transition-opacity shrink-0"
                           title="Remove attribute"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -1430,20 +1430,20 @@ export const SellerAddProductPage: React.FC = () => {
               )}
 
               {/* Quick Add Custom Attribute */}
-              <div className="pt-3 border-t border-cream-100 flex flex-col sm:flex-row items-center gap-2">
+              <div className="pt-3 border-t border-cream-100 flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="Attribute Name (e.g. Strap Material, Dial Color)"
                   value={newAttrKey}
                   onChange={(e) => setNewAttrKey(e.target.value)}
-                  className="w-full sm:flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy"
+                  className="flex-1 min-w-0 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy"
                 />
                 <input
                   type="text"
                   placeholder="Value (e.g. Genuine Leather, 42mm)"
                   value={newAttrVal}
                   onChange={(e) => setNewAttrVal(e.target.value)}
-                  className="w-full sm:flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy"
+                  className="flex-1 min-w-0 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy"
                 />
                 <Button
                   type="button"
@@ -1471,7 +1471,7 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* 5. Product Variants (Optional) */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-cream-100">
                 <div className="flex items-center gap-2">
                   <Boxes className="w-4 h-4 text-burgundy" />
@@ -1630,12 +1630,12 @@ export const SellerAddProductPage: React.FC = () => {
             </div>
 
             {/* 6. Shipping & Policy */}
-            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
+            <div className="bg-white p-4 sm:p-7 rounded-3xl border border-cream-200 shadow-soft space-y-4">
               <h3 className="font-serif font-bold text-base text-stone-900 pb-3 border-b border-cream-100 flex items-center gap-2">
                 <Truck className="w-4 h-4 text-burgundy" /> 6. Shipping & Policies
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <Input
                   label="Estimated Delivery (Days)"
                   type="number"
@@ -1648,15 +1648,17 @@ export const SellerAddProductPage: React.FC = () => {
                   value={returnDays}
                   onChange={(e) => setReturnDays(Number(e.target.value))}
                 />
-                <Select
-                  label="Publish Status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  options={[
-                    { value: 'PUBLISHED', label: 'Publish immediately to store' },
-                    { value: 'DRAFT', label: 'Save as Draft' },
-                  ]}
-                />
+                <div className="col-span-2 sm:col-span-1">
+                  <Select
+                    label="Publish Status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    options={[
+                      { value: 'PUBLISHED', label: 'Publish immediately to store' },
+                      { value: 'DRAFT', label: 'Save as Draft' },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1738,7 +1740,7 @@ export const SellerAddProductPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <Button
                 variant="outline"
                 size="md"
