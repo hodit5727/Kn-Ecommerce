@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Input } from '../../components/common/Input';
@@ -9,28 +9,34 @@ import {
   KeyRound,
   AlertTriangle,
   RefreshCw,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import { CustomerSidebar } from '../../components/customer/CustomerSidebar';
 import {
   CATEGORY_CONFIG,
   CATEGORY_OPTIONS,
   GENDER_OPTIONS,
+  STAFF_CODE_RULE,
   type Gender,
 } from '../../config/academicConfig';
-import type { UserCategory } from '../../types/auth';
+import type { UserCategory, UserType } from '../../types/auth';
 
 const namePattern = /^[A-Za-z\s.'-]+$/;
 
 export const ProfilePage: React.FC = () => {
   const { user, isLoading, sessionError, refreshSession, updateProfile, changePin } = useAuth();
   const { showToast } = useToast();
+  const profileFormRef = useRef<HTMLFormElement>(null);
 
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [gender, setGender] = useState<Gender>((user?.gender as Gender) || 'Male');
+  const [userType, setUserType] = useState<UserType>((user?.userType as UserType) || 'STUDENT');
   const [category, setCategory] = useState<UserCategory>(user?.category || 'ENGINEERING');
   const [department, setDepartment] = useState(user?.department ?? '');
   const [year, setYear] = useState(user?.year ?? 'I');
   const [registrationNumber, setRegistrationNumber] = useState(user?.registrationNumber ?? '');
+  const [staffCode, setStaffCode] = useState(user?.staffCode ?? '');
   const [profileError, setProfileError] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -46,11 +52,13 @@ export const ProfilePage: React.FC = () => {
       if (user.gender && (GENDER_OPTIONS as readonly string[]).includes(user.gender)) {
         setGender(user.gender as Gender);
       }
+      setUserType((user.userType as UserType) || 'STUDENT');
       const cat = user.category || 'ENGINEERING';
       setCategory(cat);
       setDepartment(user.department || CATEGORY_CONFIG[cat].departments[0]);
       setYear(user.year || 'I');
       setRegistrationNumber(user.registrationNumber || '');
+      setStaffCode(user.staffCode || '');
     }
   }, [user]);
 
@@ -58,31 +66,60 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     const trimmedName = fullName.trim();
     if (trimmedName.length < 3 || !namePattern.test(trimmedName)) {
-      const message = 'Enter a valid full name (letters only).';
+      const message = 'Enter a valid full name (letters only, min 3 characters).';
       setProfileError(message);
       showToast(message, 'error');
+      profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
 
-    const regRule = CATEGORY_CONFIG[category].registrationNumber;
-    const trimmedReg = registrationNumber.trim();
-    if (!trimmedReg) {
-      const message = 'Register number is required.';
-      setProfileError(message);
-      showToast(message, 'error');
-      return;
-    }
-    if (!/^\d+$/.test(trimmedReg)) {
-      const message = 'Register number must contain digits only.';
-      setProfileError(message);
-      showToast(message, 'error');
-      return;
-    }
-    if (trimmedReg.length !== regRule.length) {
-      const message = regRule.message;
-      setProfileError(message);
-      showToast(message, 'error');
-      return;
+    const isStaff = userType === 'STAFF';
+    let trimmedStaffCode: string | null = null;
+    let trimmedReg: string | null = null;
+    let selectedYear: string | null = null;
+
+    if (isStaff) {
+      trimmedStaffCode = staffCode.trim();
+      if (!trimmedStaffCode) {
+        const message = 'Staff code is required.';
+        setProfileError(message);
+        showToast(message, 'error');
+        profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (!STAFF_CODE_RULE.pattern.test(trimmedStaffCode)) {
+        const message = STAFF_CODE_RULE.message;
+        setProfileError(message);
+        showToast(message, 'error');
+        profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    } else {
+      trimmedReg = registrationNumber.trim();
+      if (!trimmedReg) {
+        const message = 'Register number is required.';
+        setProfileError(message);
+        showToast(message, 'error');
+        profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (trimmedReg.length < 3 || trimmedReg.length > 40) {
+        const message = 'Register number must be between 3 and 40 characters.';
+        setProfileError(message);
+        showToast(message, 'error');
+        profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      const validYears = CATEGORY_CONFIG[category].studentYears;
+      if (!year || !validYears.includes(year)) {
+        const message = 'Please select a valid academic year.';
+        setProfileError(message);
+        showToast(message, 'error');
+        profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      selectedYear = year;
     }
 
     const validDepts = CATEGORY_CONFIG[category].departments;
@@ -90,14 +127,7 @@ export const ProfilePage: React.FC = () => {
       const message = `Please select a valid department for ${CATEGORY_CONFIG[category].label}.`;
       setProfileError(message);
       showToast(message, 'error');
-      return;
-    }
-
-    const validYears = CATEGORY_CONFIG[category].studentYears;
-    if (!year || !validYears.includes(year)) {
-      const message = `Please select a valid academic year.`;
-      setProfileError(message);
-      showToast(message, 'error');
+      profileFormRef.current?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
 
@@ -109,10 +139,11 @@ export const ProfilePage: React.FC = () => {
         fullName: trimmedName,
         gender,
         category,
-        userType: user?.userType || 'STUDENT',
+        userType,
         department,
-        year,
-        registrationNumber: trimmedReg,
+        year: isStaff ? null : selectedYear,
+        registrationNumber: isStaff ? null : trimmedReg,
+        staffCode: isStaff ? trimmedStaffCode : null,
       });
       showToast('Personal information updated successfully.');
     } catch (err) {
@@ -186,13 +217,14 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <div className="border-b border-cream-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 md:pb-12 space-y-6 sm:space-y-8">
+      {/* Header Banner */}
+      <div className="border-b border-cream-200 pb-4 sm:pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-burgundy block mb-1">
             Sovereign Dossier
           </span>
-          <h1 className="text-3xl font-serif font-bold text-stone-900">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
             Patron Account & Security
           </h1>
         </div>
@@ -202,22 +234,23 @@ export const ProfilePage: React.FC = () => {
           </Badge>
           {user.isSellerApproved && (
             <Badge variant="emerald">
-              Seller ID: {user.sellerId || (user.businessId?.startsWith('KNSR-') ? user.businessId : user.businessId?.replace(/^KNCR-/, 'KNSR-')) || 'KNSR-0001'}
+              Seller ID: {user.sellerId || (user.businessId?.startsWith('KNSR-') ? user.businessId : user.businessId?.replace(/^KNCR-/, 'KNCR-')) || 'KNSR-0001'}
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8 items-start">
-        {/* Flipkart Style Left Sidebar */}
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+        {/* Customer Sidebar (Mobile: compact toggle drawer; Desktop: sticky column) */}
         <CustomerSidebar />
 
         {/* Settings Forms */}
-        <div className="flex-1 w-full space-y-8">
+        <div className="flex-1 w-full space-y-6 sm:space-y-8 min-w-0">
           {/* Profile Form */}
           <form
+            ref={profileFormRef}
             onSubmit={handleUpdateProfile}
-            className="bg-white rounded-3xl p-6 sm:p-8 border border-cream-200 shadow-soft space-y-6"
+            className="bg-white rounded-3xl p-5 sm:p-8 border border-cream-200 shadow-soft space-y-5 sm:space-y-6"
           >
             <div className="flex items-center justify-between pb-3 border-b border-cream-200">
               <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2">
@@ -227,10 +260,49 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {profileError && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
                 {profileError}
               </div>
             )}
+
+            {/* Member Type Selection (Student vs Staff) */}
+            <div>
+              <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
+                Member Classification
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserType('STUDENT');
+                    setProfileError(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
+                    userType === 'STUDENT'
+                      ? 'bg-burgundy text-white border-burgundy shadow-xs'
+                      : 'bg-cream-50/60 text-stone-700 border-stone-200 hover:bg-cream-100'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>Student</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserType('STAFF');
+                    setProfileError(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
+                    userType === 'STAFF'
+                      ? 'bg-burgundy text-white border-burgundy shadow-xs'
+                      : 'bg-cream-50/60 text-stone-700 border-stone-200 hover:bg-cream-100'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span>Faculty / Staff</span>
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Full Name */}
@@ -245,30 +317,53 @@ export const ProfilePage: React.FC = () => {
                 required
               />
 
-              {/* College Register Number */}
-              <div>
-                <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
-                  Register Number
-                </label>
-                <input
-                  type="text"
-                  value={registrationNumber}
-                  onChange={(e) => {
-                    setRegistrationNumber(e.target.value.replace(/\D/g, ''));
-                    setProfileError(null);
-                  }}
-                  placeholder={`${CATEGORY_CONFIG[category].registrationNumber.length} digits registration number`}
-                  maxLength={CATEGORY_CONFIG[category].registrationNumber.length}
-                  required
-                  className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy"
-                />
-                <p className="text-[10px] text-stone-400 mt-1">
-                  {CATEGORY_CONFIG[category].registrationNumber.message}
-                </p>
-              </div>
+              {/* Dynamic identifier: Register Number (Student) OR Staff Code (Staff) */}
+              {userType === 'STAFF' ? (
+                <div>
+                  <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
+                    Staff Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={staffCode}
+                    onChange={(e) => {
+                      setStaffCode(e.target.value.toUpperCase());
+                      setProfileError(null);
+                    }}
+                    placeholder="e.g. STF-1234"
+                    maxLength={16}
+                    required
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy uppercase font-mono"
+                  />
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    4–16 alphanumeric characters assigned by institution.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
+                    College Register Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={registrationNumber}
+                    onChange={(e) => {
+                      setRegistrationNumber(e.target.value);
+                      setProfileError(null);
+                    }}
+                    placeholder={`e.g. 621323205040 (${CATEGORY_CONFIG[category].registrationNumber.length} digits)`}
+                    maxLength={40}
+                    required
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy font-mono"
+                  />
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    {CATEGORY_CONFIG[category].registrationNumber.message}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-1 ${userType === 'STUDENT' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
               {/* Campus Stream / Category */}
               <div>
                 <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
@@ -316,26 +411,28 @@ export const ProfilePage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Academic Year */}
-              <div>
-                <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
-                  Academic Year
-                </label>
-                <select
-                  value={year}
-                  onChange={(e) => {
-                    setYear(e.target.value);
-                    setProfileError(null);
-                  }}
-                  className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy font-medium"
-                >
-                  {CATEGORY_CONFIG[category].studentYears.map((yr) => (
-                    <option key={yr} value={yr}>
-                      Year {yr}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Academic Year (Students only) */}
+              {userType === 'STUDENT' && (
+                <div>
+                  <label className="block text-xs font-semibold tracking-wider text-stone-700 uppercase mb-1.5">
+                    Academic Year
+                  </label>
+                  <select
+                    value={year}
+                    onChange={(e) => {
+                      setYear(e.target.value);
+                      setProfileError(null);
+                    }}
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-burgundy font-medium"
+                  >
+                    {CATEGORY_CONFIG[category].studentYears.map((yr) => (
+                      <option key={yr} value={yr}>
+                        Year {yr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
@@ -377,9 +474,23 @@ export const ProfilePage: React.FC = () => {
               />
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button type="submit" variant="primary" size="sm" isLoading={isSavingProfile}>
-                Save Changes
+            {/* Submit Action */}
+            <div className="pt-3 border-t border-cream-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {profileError ? (
+                <p className="text-xs text-red-600 font-semibold">{profileError}</p>
+              ) : (
+                <p className="text-[11px] text-stone-500">
+                  Updates sync instantly across your patron dossier and order records.
+                </p>
+              )}
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="w-full sm:w-auto min-h-[44px]"
+                isLoading={isSavingProfile}
+              >
+                Save Profile Changes
               </Button>
             </div>
           </form>
@@ -388,7 +499,7 @@ export const ProfilePage: React.FC = () => {
           <form
             id="security-pin"
             onSubmit={handleUpdatePin}
-            className="bg-white rounded-3xl p-6 sm:p-8 border border-cream-200 shadow-soft space-y-4"
+            className="bg-white rounded-3xl p-5 sm:p-8 border border-cream-200 shadow-soft space-y-4"
           >
             <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2 pb-3 border-b border-cream-200">
               <KeyRound className="w-4 h-4 text-burgundy" /> Security PIN Configuration
@@ -398,7 +509,7 @@ export const ProfilePage: React.FC = () => {
             </p>
 
             {pinError && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
                 {pinError}
               </div>
             )}
@@ -428,8 +539,21 @@ export const ProfilePage: React.FC = () => {
               />
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button type="submit" variant="secondary" size="sm" isLoading={isUpdatingPin}>
+            <div className="pt-3 border-t border-cream-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {pinError ? (
+                <p className="text-xs text-red-600 font-semibold">{pinError}</p>
+              ) : (
+                <p className="text-[11px] text-stone-500">
+                  PIN is salted & hashed via scrypt on the server.
+                </p>
+              )}
+              <Button
+                type="submit"
+                variant="secondary"
+                size="md"
+                className="w-full sm:w-auto min-h-[44px]"
+                isLoading={isUpdatingPin}
+              >
                 Update Security PIN
               </Button>
             </div>
