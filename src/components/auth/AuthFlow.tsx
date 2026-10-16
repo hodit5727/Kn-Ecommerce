@@ -73,7 +73,7 @@ const STEPS: Array<{ num: Step; label: string }> = [
   { num: 2, label: 'OTP Verification' },
   { num: 3, label: 'Set PIN' },
   { num: 4, label: 'Basic Information' },
-  { num: 5, label: 'Academic/Staff Information' },
+  { num: 5, label: 'Academic Information' },
   { num: 6, label: 'Complete Profile' },
 ];
 
@@ -158,10 +158,10 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
     gender: Gender | '';
   }>({ fullName: '', gender: '' });
 
-  // Step 5 — category + student/staff + academic details
+  // Step 5 — category + academic details (strictly student)
   const [category, setCategory] = useState<UserCategory | ''>('');
   const [academic, setAcademic] = useState({
-    userType: '' as UserType | '',
+    userType: 'STUDENT' as UserType,
     department: '',
     year: '',
     registrationNumber: '',
@@ -651,18 +651,10 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
     { label: 'Phone Number', value: `+91 ${phone}` },
     { label: 'Email (login)', value: email.trim() },
     { label: 'Category', value: categoryConfig ? categoryConfig.label : '' },
-    {
-      label: 'User Type',
-      value: academic.userType === 'STAFF' ? 'Staff' : 'Student',
-    },
     { label: 'Department', value: academic.department },
+    { label: 'Year', value: academic.year },
+    { label: 'Registration Number', value: academic.registrationNumber },
   ];
-  if (isStudent) {
-    reviewRows.push({ label: 'Year', value: academic.year });
-    reviewRows.push({ label: 'Registration Number', value: academic.registrationNumber });
-  } else if (isStaff) {
-    reviewRows.push({ label: 'Staff Code', value: academic.staffCode.trim() });
-  }
 
   return (
     <>
@@ -1290,31 +1282,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
             {fieldError('category')}
           </div>
 
-          {/* Student / Staff — required for every category */}
-          {category && (
-            <div>
-              <label className="block text-xs font-semibold tracking-wide text-stone-700 mb-1.5 uppercase">
-                I am a <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {USER_TYPE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleUserTypeChange(option.value)}
-                    className={`py-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                      academic.userType === option.value
-                        ? 'bg-burgundy text-white border-burgundy'
-                        : 'bg-white border-stone-200 text-stone-700 hover:border-burgundy/40'
-                    }`}
-                  >
-                    {option.value === 'STUDENT' ? '🎓 Student' : '👨‍🏫 Staff'}
-                  </button>
-                ))}
-              </div>
-              {fieldError('userType')}
-            </div>
-          )}
+
 
           {/* Department — both students and staff */}
           {category && academic.userType && (
@@ -1403,34 +1371,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
             </div>
           )}
 
-          {/* Staff Code — staff only */}
-          {category && isStaff && (
-            <div>
-              <label className="block text-xs font-semibold tracking-wide text-stone-700 mb-1.5 uppercase">
-                Staff Code <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. STF2024"
-                required
-                value={academic.staffCode}
-                onChange={(e) => {
-                  setAcademic((prev) => ({ ...prev, staffCode: e.target.value.toUpperCase() }));
-                  clearFieldError('staffCode');
-                  clearApiError();
-                }}
-                className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors font-mono tracking-wider"
-              />
-              <p className="mt-1 text-[11px] text-stone-400">{STAFF_CODE_RULE.message}</p>
-              {fieldError('staffCode')}
-            </div>
-          )}
 
-          {isStaff && (
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-800">
-              Staff users do not need to provide a student registration number or a year.
-            </div>
-          )}
 
           <Button
             type="submit"

@@ -274,35 +274,40 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ activeOrdersCo
           onClick={() => setIsMobileDrawerOpen(true)}
           className="w-full bg-white rounded-2xl p-3 border border-cream-200 shadow-soft flex items-center justify-between text-left active:bg-cream-50 transition-colors"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt="Profile photo"
-                className="w-9 h-9 rounded-xl object-cover border border-cream-300 shadow-xs shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-xl bg-burgundy text-white font-serif font-bold text-xs flex items-center justify-center border border-cream-300 shadow-xs shrink-0">
-                {user?.fullName?.charAt(0).toUpperCase() || 'K'}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Menu trigger button on LEFT */}
+            <div className="flex items-center gap-1.5 text-burgundy text-xs font-bold shrink-0 bg-burgundy/10 px-3 py-2 rounded-xl border border-burgundy/20 shadow-xs">
+              <Menu className="w-4 h-4" />
+              <span>Menu</span>
+            </div>
+
+            {/* User Profile Summary */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="Profile photo"
+                  className="w-8 h-8 rounded-xl object-cover border border-cream-300 shadow-xs shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-xl bg-burgundy text-white font-serif font-bold text-xs flex items-center justify-center border border-cream-300 shadow-xs shrink-0">
+                  {user?.fullName?.charAt(0).toUpperCase() || 'K'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-stone-900 truncate block">{user?.fullName || 'My Account'}</span>
+                  <span className="text-[9px] text-burgundy font-bold uppercase tracking-wider bg-cream-100 px-1.5 py-0.5 rounded border border-cream-200 shrink-0">
+                    {activeRole}
+                  </span>
+                </div>
+                <p className="text-[10px] text-stone-500 truncate block mt-0.5">
+                  Orders ({activeCount}) &bull; Settings
+                </p>
               </div>
-            )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-bold text-stone-900 truncate">{user?.fullName || 'My Account'}</span>
-                <span className="text-[9px] text-burgundy font-bold uppercase tracking-wider bg-cream-100 px-1.5 py-0.5 rounded border border-cream-200">
-                  {activeRole}
-                </span>
-              </div>
-              <p className="text-[11px] text-stone-500 truncate flex items-center gap-1 mt-0.5">
-                <Menu className="w-3 h-3 text-burgundy inline shrink-0" />
-                <span>Account Menu & Orders ({activeCount})</span>
-              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-burgundy text-xs font-bold shrink-0 bg-burgundy/10 px-2.5 py-1.5 rounded-xl border border-burgundy/20">
-            <Menu className="w-3.5 h-3.5" />
-            <span>Menu</span>
-          </div>
+          <ChevronRight className="w-4 h-4 text-stone-400 shrink-0 ml-1" />
         </button>
       </div>
 
