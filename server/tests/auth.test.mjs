@@ -168,6 +168,35 @@ test('OTP verify happy path sets HttpOnly SameSite=Lax cookies + requiresProfile
   assert.equal(sessionRes.body.user.onboardingComplete, false);
 });
 
+test('expired access cookie with valid refresh cookie automatically refreshes session and sets fresh cookies', async (t) => {
+  const fake = createFakeSupabase();
+  const { server, base } = await makeServer(fake);
+  t.after(() => server.close());
+
+  const res = await request(base, '/api/v1/auth/otp/verify', {
+    method: 'POST',
+    body: { email: 'a@b.co', otp: '123456' },
+  });
+  assert.equal(res.status, 200);
+
+  // Simulate access token expiry by keeping ONLY ks_refresh in the client cookie jar
+  const jar = cookieJar(res);
+  const refreshOnlyJar = { ks_refresh: jar.ks_refresh };
+
+  // Request /auth/session with only the refresh cookie
+  const sessionRes = await request(base, '/api/v1/auth/session', {
+    headers: { Cookie: cookieHeader(refreshOnlyJar) },
+  });
+  assert.equal(sessionRes.status, 200);
+  assert.ok(sessionRes.body.user);
+  assert.equal(sessionRes.body.user.email, 'a@b.co');
+
+  // Verify that fresh rotated cookies were set
+  const setCookies = sessionRes.headers.getSetCookie?.() ?? [];
+  assert.ok(setCookies.some((c) => c.startsWith('ks_access=')), 'must issue fresh ks_access');
+  assert.ok(setCookies.some((c) => c.startsWith('ks_refresh=')), 'must issue fresh ks_refresh');
+});
+
 test('OTP verify → requiresProfile=false when the profile is already complete', async (t) => {
   const fake = createFakeSupabase();
   fake.helpers.seedProfile({

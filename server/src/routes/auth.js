@@ -190,8 +190,8 @@ export function createAuthRouter({ env, supabase }) {
       }
       if (isTransientUpstreamError(err)) {
         // eslint-disable-next-line no-console
-        console.warn('[auth/session] transient upstream outage; answering user:null:', describeUpstreamError(err));
-        return ok(res, { user: null });
+        console.warn('[auth/session] transient upstream outage (preserving session):', describeUpstreamError(err));
+        throw httpError(503, 'Authentication service temporarily unavailable. Retrying...');
       }
       throw err;
     }
@@ -316,6 +316,9 @@ export function createAuthRouter({ env, supabase }) {
         ip: req.ip ?? null,
         metadata: { email },
       });
+      if (req.auth?.session) {
+        setSessionCookies(res, req.auth.session, env);
+      }
       return ok(res, { user: profileToUser(row) });
     }
 

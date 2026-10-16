@@ -97,6 +97,10 @@ export function loadEnv(vars = process.env) {
     SUPABASE_SERVICE_ROLE_KEY: String(vars.SUPABASE_SERVICE_ROLE_KEY).trim(),
     SESSION_SECRET: secret,
     SESSION_TTL_MINUTES: int('SESSION_TTL_MINUTES', 60, 1, 1440),
+    REFRESH_TTL_DAYS: int('REFRESH_TTL_DAYS', 30, 1, 365),
+    COOKIE_SAME_SITE: vars.COOKIE_SAME_SITE && ['lax', 'strict', 'none'].includes(String(vars.COOKIE_SAME_SITE).trim().toLowerCase())
+      ? String(vars.COOKIE_SAME_SITE).trim().toLowerCase()
+      : null,
     OTP_TTL_MINUTES: int('OTP_TTL_MINUTES', 10, 1, 60),
     PIN_RESET_TTL_MINUTES: int('PIN_RESET_TTL_MINUTES', 15, 1, 120),
     SMTP: vars.SMTP_HOST && vars.SMTP_HOST.trim() !== ''

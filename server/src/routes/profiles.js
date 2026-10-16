@@ -32,6 +32,7 @@ import {
 import { loadProfileRow } from '../lib/profile.js';
 import { profileToUser } from '../lib/shape.js';
 import { writeAudit } from '../lib/audit.js';
+import { setSessionCookies } from '../lib/cookies.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sellerApplyLimiter } from '../middleware/security.js';
 import {
@@ -103,9 +104,11 @@ export function createProfilesRouter({ env, supabase }) {
       action: 'customer.profile.completed',
       resourceType: 'profile',
       resourceId: profile.id,
-      ip: req.ip ?? null,
       metadata: { email: fields.email, user_type: fields.user_type, category: fields.category },
     });
+    if (req.auth?.session) {
+      setSessionCookies(res, req.auth.session, env);
+    }
     return ok(res, { user: profileToUser(row) });
   });
 

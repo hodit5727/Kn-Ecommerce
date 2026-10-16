@@ -122,6 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const sessionUser = await authService.getSession();
         if (!sessionUser) {
           window.dispatchEvent(new CustomEvent('kshop:session-expired'));
+        } else {
+          setUser(sessionUser);
         }
       } catch (err: any) {
         if (err?.status === 401 || err?.message?.toLowerCase().includes('not signed in')) {

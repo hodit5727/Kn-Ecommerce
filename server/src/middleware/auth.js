@@ -15,9 +15,11 @@ import { loadProfileRow } from '../lib/profile.js';
  * @returns {{ user: object, session: object, refreshed: boolean }}
  */
 export async function resolveSession(supabase, tokens) {
-  const { data: accessData, error: accessError } = await supabase.anon.auth.getUser(tokens.accessToken);
-  if (!accessError && accessData && accessData.user) {
-    return { user: accessData.user, session: { access_token: tokens.accessToken, refresh_token: tokens.refreshToken }, refreshed: false };
+  if (tokens.accessToken) {
+    const { data: accessData, error: accessError } = await supabase.anon.auth.getUser(tokens.accessToken);
+    if (!accessError && accessData && accessData.user) {
+      return { user: accessData.user, session: { access_token: tokens.accessToken, refresh_token: tokens.refreshToken }, refreshed: false };
+    }
   }
 
   // Access token expired/invalid → try the refresh token (server-side refresh).
@@ -55,7 +57,7 @@ export function requireAuth(supabase, env) {
         throw httpError(403, 'Account deactivated.');
       }
 
-      req.auth = { user, profile };
+      req.auth = { user, profile, session };
       if (refreshed) {
         // Rotation happened — hand the new tokens to the browser.
         setSessionCookies(_res, session, env);
