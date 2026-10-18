@@ -7,7 +7,7 @@
  * can render a real error state instead of pretending the user is signed out
  * or signed in.
  */
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type {
   OnboardingProfilePayload,
   SellerApplicationData,
@@ -113,16 +113,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const userRef = useRef<UserProfile | null>(user);
+  userRef.current = user;
+
   // Periodic liveness check & tab re-focus check for active users
   useEffect(() => {
-    if (IS_UI_PREVIEW || !user) return;
+    if (IS_UI_PREVIEW) return;
+
+    const areProfilesEqual = (a: UserProfile | null, b: UserProfile | null): boolean => {
+      if (a === b) return true;
+      if (!a || !b) return false;
+      return (
+        a.id === b.id &&
+        a.email === b.email &&
+        a.role === b.role &&
+        a.sellerStatus === b.sellerStatus &&
+        a.fullName === b.fullName &&
+        a.businessId === b.businessId &&
+        a.avatarUrl === b.avatarUrl &&
+        a.isSellerApproved === b.isSellerApproved &&
+        JSON.stringify(a.roles ?? []) === JSON.stringify(b.roles ?? [])
+      );
+    };
 
     const checkSessionLiveness = async () => {
+      if (!userRef.current) return;
       try {
         const sessionUser = await authService.getSession();
         if (!sessionUser) {
           window.dispatchEvent(new CustomEvent('kshop:session-expired'));
-        } else {
+        } else if (!areProfilesEqual(userRef.current, sessionUser)) {
           setUser(sessionUser);
         }
       } catch (err: any) {
@@ -134,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const interval = setInterval(checkSessionLiveness, 60000);
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && userRef.current) {
         void checkSessionLiveness();
       }
     };
@@ -147,7 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.removeEventListener('focus', onVisibility);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [user]);
+  }, []);
 
   // Keep the active role consistent with the SERVER-provided role.
   useEffect(() => {

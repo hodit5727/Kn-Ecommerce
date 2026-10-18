@@ -21,6 +21,28 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <AuthFlow />
+
+        {/* Staff & Operations Portals */}
+        <div className="pt-4 border-t border-cream-100 flex flex-col gap-2 text-xs text-stone-500">
+          <div className="flex items-center justify-between">
+            <span>Campus delivery agent?</span>
+            <a
+              href="/delivery/login"
+              className="font-semibold text-burgundy hover:underline inline-flex items-center gap-1"
+            >
+              Delivery Staff Sign In &rarr;
+            </a>
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-stone-400">
+            <span>Administrative staff?</span>
+            <a
+              href="/admin/login"
+              className="hover:underline hover:text-stone-600 inline-flex items-center gap-1"
+            >
+              Admin Control Tower &rarr;
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

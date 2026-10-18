@@ -110,6 +110,12 @@ export const Footer: React.FC = () => {
               <li><Link to="/orders" className="hover:text-burgundy">Requisition Status</Link></li>
               <li><Link to="/refunds" className="hover:text-burgundy">Arbitration & Claims</Link></li>
               <li><Link to="/support" className="hover:text-burgundy">Patron Concierge</Link></li>
+              <li>
+                <Link to="/delivery/login" className="hover:text-burgundy flex items-center gap-1.5 font-medium text-stone-700">
+                  <Truck className="w-3.5 h-3.5 text-burgundy" />
+                  <span>Campus Delivery Portal</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -131,6 +137,7 @@ export const Footer: React.FC = () => {
                   Cookie Preferences
                 </button>
               </li>
+              <li><Link to="/delivery/login" className="hover:text-burgundy text-stone-500">Delivery Operator Sign In</Link></li>
               <li><Link to="/admin" className="hover:text-burgundy text-stone-400">Admin Control Tower</Link></li>
             </ul>
           </div>

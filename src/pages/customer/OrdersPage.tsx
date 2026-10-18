@@ -58,14 +58,18 @@ export const OrdersPage: React.FC = () => {
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [orderToRefund, setOrderToRefund] = useState<Order | null>(null);
 
-  const fetchOrders = async () => {
-    setIsLoading(true);
+  const fetchOrders = async (silent = false) => {
+    if (!silent && orders.length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await orderService.getOrders(user?.id);
       setOrders(data);
     } catch (err: any) {
-      setError(err.message || 'Unable to retrieve orders from the server. Please try again.');
+      if (orders.length === 0) {
+        setError(err.message || 'Unable to retrieve orders from the server. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +77,7 @@ export const OrdersPage: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [user]);
+  }, [user?.id]);
 
   // Pre-generate QR codes for scannable delivery handover
   useEffect(() => {

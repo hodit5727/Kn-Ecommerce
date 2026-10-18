@@ -15,7 +15,8 @@ import {
   KeyRound,
   ArrowLeftRight,
   Menu,
-  X
+  X,
+  Truck
 } from 'lucide-react';
 
 interface CustomerSidebarProps {
@@ -242,6 +243,27 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ activeOrdersCo
             </Link>
           )}
         </div>
+
+        {/* SECTION: DELIVERY AGENT PORTAL (Visible if user has delivery or admin role) */}
+        {(user?.role === 'DELIVERY_PERSON' ||
+          user?.roles?.includes('DELIVERY_PERSON') ||
+          user?.role === 'ADMIN' ||
+          user?.roles?.includes('ADMIN') ||
+          user?.roles?.includes('SUPER_ADMIN')) && (
+          <div className="p-3">
+            <Link
+              to="/delivery"
+              onClick={() => setIsMobileDrawerOpen(false)}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-emerald-700" />
+                <span>Delivery Staff Dashboard</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-700" />
+            </Link>
+          </div>
+        )}
 
         {/* SECTION: LOGOUT */}
         <div className="p-3">

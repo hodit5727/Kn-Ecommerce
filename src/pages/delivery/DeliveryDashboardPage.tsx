@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { deliveryService } from '../../services/deliveryService';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -25,7 +25,11 @@ import {
   Camera,
   Keyboard,
   ShoppingBag,
-  ExternalLink
+  ExternalLink,
+  Flashlight,
+  FlipHorizontal,
+  Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { ErrorState } from '../../components/common/ErrorState';
@@ -57,6 +61,7 @@ export const DeliveryDashboardPage: React.FC = () => {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'PENDING' | 'DELIVERED'>('PENDING');
@@ -73,8 +78,12 @@ export const DeliveryDashboardPage: React.FC = () => {
   const [scannedInput, setScannedInput] = useState('');
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Authentication & Role Protection
   useEffect(() => {
@@ -96,8 +105,12 @@ export const DeliveryDashboardPage: React.FC = () => {
     }
   }, [user, isLoadingAuth, navigate]);
 
-  const fetchOrders = async () => {
-    setIsLoading(true);
+  const fetchOrders = async (silent = false) => {
+    if (!silent && orders.length === 0) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     setError(null);
     try {
       const data = await deliveryService.getDeliveryOrders();
@@ -107,17 +120,20 @@ export const DeliveryDashboardPage: React.FC = () => {
         navigate('/delivery/login', { replace: true });
         return;
       }
-      setError(err.message || 'Unable to retrieve campus delivery orders.');
+      if (orders.length === 0) {
+        setError(err.message || 'Unable to retrieve campus delivery orders.');
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchOrders();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const handleMarkDelivered = async (orderId: string) => {
     setIsUpdating(true);
@@ -125,7 +141,7 @@ export const DeliveryDashboardPage: React.FC = () => {
       await deliveryService.markAsDelivered(orderId);
       showToast('Order confirmed as Delivered! Cash collected successfully.', 'success');
       setActiveOrder(null);
-      await fetchOrders();
+      await fetchOrders(true);
     } catch (err: any) {
       showToast(err.message || 'Failed to update order status.', 'error');
     } finally {
@@ -133,7 +149,7 @@ export const DeliveryDashboardPage: React.FC = () => {
     }
   };
 
-  // Process Scanned or Entered Code
+  // Process Scanned or Entered Code with resilient multi-format matching
   const handleProcessScan = async (rawCode?: string) => {
     setScannerError(null);
     const codeToTest = (rawCode || scannedInput || '').trim();
@@ -142,42 +158,74 @@ export const DeliveryDashboardPage: React.FC = () => {
       return;
     }
 
-    let targetCode = codeToTest;
+    let parsed: any = null;
     try {
-      // Check if scanned input is a JSON payload
-      const parsed = JSON.parse(codeToTest);
-      if (parsed.orderCode) targetCode = parsed.orderCode;
-      else if (parsed.orderId) targetCode = parsed.orderId;
-      else if (parsed.token) targetCode = parsed.token;
-    } catch (e) {
+      parsed = JSON.parse(codeToTest);
+    } catch {
       // plain text string
     }
 
-    const cleanTarget = targetCode.toLowerCase().replace(/^#/, '');
+    const cleanInput = codeToTest.toLowerCase().replace(/^#/, '').trim();
+    const candidateCodes: string[] = [cleanInput];
 
-    // Search in current orders
-    let matched = orders.find(
-      (o) =>
-        o.id.toLowerCase() === cleanTarget ||
-        (o.orderCode && o.orderCode.toLowerCase() === cleanTarget) ||
-        (o.orderNumber && o.orderNumber.toLowerCase() === cleanTarget) ||
-        cleanTarget.includes(o.id.slice(0, 6).toLowerCase()) ||
-        (o.customerBusinessId && o.customerBusinessId.toLowerCase() === cleanTarget)
-    );
+    if (parsed && typeof parsed === 'object') {
+      if (parsed.orderId) candidateCodes.push(String(parsed.orderId).toLowerCase().trim());
+      if (parsed.orderCode) {
+        const c = String(parsed.orderCode).toLowerCase().trim().replace(/^#/, '');
+        candidateCodes.push(c);
+        candidateCodes.push(c.replace(/^knor-/, ''));
+      }
+      if (parsed.token) candidateCodes.push(String(parsed.token).toLowerCase().trim());
+      if (parsed.phone) candidateCodes.push(String(parsed.phone).toLowerCase().trim());
+    } else {
+      // Check if raw string is URL
+      try {
+        if (codeToTest.startsWith('http')) {
+          const u = new URL(codeToTest);
+          const parts = u.pathname.split('/').filter(Boolean);
+          const lastPart = parts[parts.length - 1];
+          if (lastPart) candidateCodes.push(lastPart.toLowerCase().trim());
+        }
+      } catch {}
+      candidateCodes.push(cleanInput.replace(/^knor-/, ''));
+    }
+
+    const findMatch = (orderList: Order[]) => {
+      return orderList.find((o) => {
+        const oId = (o.id || '').toLowerCase();
+        const oCode = (o.orderCode || '').toLowerCase().replace(/^#/, '');
+        const oNum = String(o.orderNumber || '').toLowerCase();
+        const oNumPrefixed = `knor-${oNum}`;
+        const oCustBiz = (o.customerBusinessId || '').toLowerCase();
+        const oToken = oId.slice(0, 6);
+
+        for (const candidate of candidateCodes) {
+          if (!candidate) continue;
+          if (oId === candidate) return true;
+          if (oCode === candidate) return true;
+          if (oNum === candidate) return true;
+          if (oNumPrefixed === candidate) return true;
+          if (oCustBiz && oCustBiz === candidate) return true;
+          if (candidate.length >= 6 && (oId.startsWith(candidate) || oToken === candidate)) return true;
+          if (candidate.includes(oId)) return true;
+        }
+
+        if (parsed?.orderId && oId === String(parsed.orderId).toLowerCase().trim()) return true;
+        if (parsed?.orderCode && (oCode === String(parsed.orderCode).toLowerCase().trim() || oNumPrefixed === String(parsed.orderCode).toLowerCase().trim())) return true;
+        if (parsed?.token && (oToken === String(parsed.token).toLowerCase().trim() || oId.startsWith(String(parsed.token).toLowerCase().trim()))) return true;
+
+        return false;
+      });
+    };
+
+    let matched = findMatch(orders);
 
     // If not found in current local state, fetch fresh orders from backend
     if (!matched) {
       try {
         const fresh = await deliveryService.getDeliveryOrders();
         setOrders(fresh);
-        matched = fresh.find(
-          (o) =>
-            o.id.toLowerCase() === cleanTarget ||
-            (o.orderCode && o.orderCode.toLowerCase() === cleanTarget) ||
-            (o.orderNumber && o.orderNumber.toLowerCase() === cleanTarget) ||
-            cleanTarget.includes(o.id.slice(0, 6).toLowerCase()) ||
-            (o.customerBusinessId && o.customerBusinessId.toLowerCase() === cleanTarget)
-        );
+        matched = findMatch(fresh);
       } catch (e) {
         // ignore
       }
@@ -185,16 +233,24 @@ export const DeliveryDashboardPage: React.FC = () => {
 
     if (matched) {
       playScanSuccessSound();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(() => {});
+        html5QrCodeRef.current = null;
+      }
+      setIsCameraActive(false);
       setActiveOrder(matched);
       setIsScannerOpen(false);
       setScannedInput('');
       showToast(`Verified Order: ${matched.orderCode || matched.orderNumber}`, 'success');
     } else {
-      setScannerError(`No matching order found for "${codeToTest}". Please check the ID or refresh.`);
+      setScannerError(`No matching campus order found for "${codeToTest}". Please check the ID or refresh.`);
     }
   };
 
-  // Camera QR Scanner Lifecycle
+  // Camera QR Scanner Lifecycle with hardware BarcodeDetector and responsive qrbox
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
     let isMounted = true;
@@ -209,17 +265,37 @@ export const DeliveryDashboardPage: React.FC = () => {
         if (!elem) return;
 
         try {
-          html5QrCode = new Html5Qrcode(containerId);
+          html5QrCode = new Html5Qrcode(containerId, {
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+            verbose: false,
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true,
+            },
+          });
           html5QrCodeRef.current = html5QrCode;
+
+          const scanConfig = {
+            fps: 20,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              const edge = Math.floor(minEdge * 0.78);
+              return {
+                width: Math.max(edge, 200),
+                height: Math.max(edge, 200),
+              };
+            },
+            aspectRatio: 1.0,
+            disableFlip: false,
+            videoConstraints: {
+              facingMode: cameraFacing,
+              focusMode: 'continuous',
+            },
+          };
 
           html5QrCode
             .start(
-              { facingMode: 'environment' },
-              {
-                fps: 10,
-                qrbox: { width: 220, height: 220 },
-                aspectRatio: 1.0,
-              },
+              { facingMode: cameraFacing },
+              scanConfig,
               (decodedText) => {
                 if (html5QrCode?.isScanning) {
                   html5QrCode.stop().then(() => {
@@ -233,12 +309,21 @@ export const DeliveryDashboardPage: React.FC = () => {
               }
             )
             .then(() => {
-              if (isMounted) setIsCameraActive(true);
+              if (isMounted) {
+                setIsCameraActive(true);
+                // Check if torch/flashlight is supported
+                try {
+                  const capabilities: any = html5QrCode?.getRunningTrackCameraCapabilities();
+                  if (capabilities?.torchFeature?.()?.isSupported?.() || capabilities?.isTorchSupported?.()) {
+                    setHasTorch(true);
+                  }
+                } catch {}
+              }
             })
             .catch((err) => {
               console.warn('[QR Scanner] Camera start error:', err);
               if (isMounted) {
-                setScannerError('Camera access denied or unavailable. You can type or paste the code below.');
+                setScannerError('Camera access denied or unavailable. You can snap a photo or type the code below.');
                 setScannerMode('manual');
                 setIsCameraActive(false);
               }
@@ -259,6 +344,7 @@ export const DeliveryDashboardPage: React.FC = () => {
           html5QrCodeRef.current = null;
         }
         setIsCameraActive(false);
+        setIsTorchOn(false);
       };
     } else {
       if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
@@ -266,8 +352,60 @@ export const DeliveryDashboardPage: React.FC = () => {
         html5QrCodeRef.current = null;
       }
       setIsCameraActive(false);
+      setIsTorchOn(false);
     }
-  }, [isScannerOpen, scannerMode]);
+  }, [isScannerOpen, scannerMode, cameraFacing]);
+
+  // Handle uploading / snapping a photo file for decoding
+  const handleScanImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScannerError(null);
+    try {
+      let qrEngine = html5QrCodeRef.current;
+      if (!qrEngine) {
+        qrEngine = new Html5Qrcode('qr-camera-stream', {
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          verbose: false,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        });
+      }
+      if (qrEngine.isScanning) {
+        await qrEngine.stop();
+        setIsCameraActive(false);
+      }
+      const decodedResult = await qrEngine.scanFile(file, true);
+      handleProcessScan(decodedResult);
+    } catch (err: any) {
+      setScannerError('Could not decode QR code from the selected image. Please make sure the image is in focus or enter the order ID manually.');
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Toggle Camera Torch / Flashlight
+  const toggleTorch = async () => {
+    if (!html5QrCodeRef.current || !html5QrCodeRef.current.isScanning) return;
+    try {
+      const nextTorch = !isTorchOn;
+      await html5QrCodeRef.current.applyVideoConstraints({
+        advanced: [{ torch: nextTorch } as any],
+      });
+      setIsTorchOn(nextTorch);
+    } catch (e) {
+      // Torch not supported
+    }
+  };
+
+  // Flip Camera Facing Mode (Front vs Back)
+  const toggleFlipCamera = () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      html5QrCodeRef.current.stop().catch(() => {});
+      html5QrCodeRef.current = null;
+    }
+    setIsCameraActive(false);
+    setCameraFacing((prev) => (prev === 'environment' ? 'user' : 'environment'));
+  };
 
   // Clean stop when closing modal
   const handleCloseScanner = () => {
@@ -276,6 +414,7 @@ export const DeliveryDashboardPage: React.FC = () => {
       html5QrCodeRef.current = null;
     }
     setIsCameraActive(false);
+    setIsTorchOn(false);
     setIsScannerOpen(false);
     setScannerError(null);
     setScannedInput('');
@@ -345,15 +484,16 @@ export const DeliveryDashboardPage: React.FC = () => {
             <span className="hidden sm:inline">Scan QR</span>
           </button>
           <button
-            onClick={fetchOrders}
+            onClick={() => fetchOrders(false)}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white"
             title="Refresh orders"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={async () => {
               await logout();
+              showToast('Signed out of delivery app.', 'info');
               navigate('/delivery/login');
             }}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white"
@@ -477,7 +617,7 @@ export const DeliveryDashboardPage: React.FC = () => {
                 variant="primary"
                 size="sm"
                 className="bg-burgundy text-white"
-                onClick={fetchOrders}
+                onClick={() => fetchOrders()}
               >
                 Retry
               </Button>
@@ -858,18 +998,65 @@ export const DeliveryDashboardPage: React.FC = () => {
             {/* Camera Viewfinder */}
             {scannerMode === 'camera' ? (
               <div className="space-y-3">
-                <div className="relative rounded-2xl overflow-hidden bg-black aspect-square flex items-center justify-center border-2 border-dashed border-stone-300">
+                <div className="relative rounded-2xl overflow-hidden bg-black aspect-square flex items-center justify-center border-2 border-stone-300">
                   <div id="qr-camera-stream" className="w-full h-full" />
                   {!isCameraActive && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-900/90 text-white text-xs p-4 text-center">
                       <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mb-2" />
-                      Starting rear camera...
-                      <span className="text-[10px] text-stone-400 mt-1">Please allow camera permissions if prompted</span>
+                      Starting camera scanner...
+                      <span className="text-[10px] text-stone-400 mt-1">Point directly at customer QR pass</span>
+                    </div>
+                  )}
+                  {isCameraActive && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                      {hasTorch && (
+                        <button
+                          type="button"
+                          onClick={toggleTorch}
+                          className={`p-2 rounded-xl backdrop-blur-md text-xs font-semibold flex items-center gap-1 transition-all ${
+                            isTorchOn
+                              ? 'bg-amber-400 text-stone-900 shadow-md'
+                              : 'bg-black/50 text-white hover:bg-black/70'
+                          }`}
+                          title="Flashlight"
+                        >
+                          <Flashlight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={toggleFlipCamera}
+                        className="p-2 rounded-xl bg-black/50 hover:bg-black/70 text-white backdrop-blur-md transition-all"
+                        title="Flip Camera"
+                      >
+                        <FlipHorizontal className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>
+
+                {/* Snap Photo / Image File Fallback & Instructions */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2 px-3 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-stone-600" />
+                    <span>Snap Photo / Select Image</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleScanImageFile}
+                  />
+                </div>
+
                 <p className="text-[11px] text-center text-stone-500">
-                  Align customer pass QR within the frame to auto-detect
+                  Align customer pass QR within frame to auto-detect, or snap photo
                 </p>
               </div>
             ) : (
