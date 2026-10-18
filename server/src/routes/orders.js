@@ -397,7 +397,7 @@ export function createOrdersRouter({ env, supabase }) {
         try {
           const orderCode = formatOrderNumber(order.order_number, order.id);
           const [customerRowRes, sellerRowRes, sellerUserRes] = await Promise.all([
-            supabase.service.from('profiles').select('email, full_name').eq('id', order.customer_id).maybeSingle(),
+            supabase.service.from('profiles').select('email, full_name, phone').eq('id', order.customer_id).maybeSingle(),
             supabase.service.from('seller_profiles').select('store_name').eq('profile_id', order.seller_id).maybeSingle(),
             supabase.service.from('profiles').select('email').eq('id', order.seller_id).maybeSingle(),
           ]);
@@ -425,6 +425,8 @@ export function createOrdersRouter({ env, supabase }) {
             sendOrderDeliveredAdminAlertEmail(env, {
               orderCode,
               customerName,
+              customerEmail: customerRow?.email,
+              customerPhone: customerRow?.phone,
               totalAmount: order.total,
               storeName,
             })
@@ -455,7 +457,7 @@ export function createOrdersRouter({ env, supabase }) {
         try {
           const orderCode = formatOrderNumber(order.order_number, order.id);
           const [customerRowRes, sellerRowRes, sellerUserRes] = await Promise.all([
-            supabase.service.from('profiles').select('email, full_name').eq('id', order.customer_id).maybeSingle(),
+            supabase.service.from('profiles').select('email, full_name, phone').eq('id', order.customer_id).maybeSingle(),
             supabase.service.from('seller_profiles').select('store_name').eq('profile_id', order.seller_id).maybeSingle(),
             supabase.service.from('profiles').select('email').eq('id', order.seller_id).maybeSingle(),
           ]);
@@ -482,8 +484,11 @@ export function createOrdersRouter({ env, supabase }) {
             sendOrderCancelledAdminAlertEmail(env, {
               orderCode,
               customerName,
+              customerEmail: customerRow?.email,
+              customerPhone: customerRow?.phone,
               cancelledBy: req.auth.profile.role,
               reason: req.body?.cancelReason,
+              totalAmount: order.total,
             })
           );
 
@@ -798,7 +803,7 @@ export function createOrdersRouter({ env, supabase }) {
         const orderCode = formatOrderNumber(placed?.order_number, placed?.id || orderId);
         const { data: customerRow } = await supabase.service
           .from('profiles')
-          .select('email, full_name')
+          .select('email, full_name, phone')
           .eq('id', profile.id)
           .maybeSingle();
 
@@ -838,6 +843,8 @@ export function createOrdersRouter({ env, supabase }) {
         await sendOrderPlacedAdminAlertEmail(env, {
           orderCode,
           customerName,
+          customerEmail,
+          customerPhone: customerRow?.phone || profile.phone || '',
           totalAmount: total,
           itemCount: lines.length,
           storeName,
@@ -949,7 +956,7 @@ export function createOrdersRouter({ env, supabase }) {
         const orderCode = formatOrderNumber(updated?.order_number, updated?.id || id);
         const { data: customerRow } = await supabase.service
           .from('profiles')
-          .select('email, full_name')
+          .select('email, full_name, phone')
           .eq('id', updated.customer_id)
           .maybeSingle();
         const { data: sellerRow } = await supabase.service
@@ -975,8 +982,11 @@ export function createOrdersRouter({ env, supabase }) {
         await sendOrderCancelledAdminAlertEmail(env, {
           orderCode,
           customerName,
+          customerEmail: customerRow?.email || profile.email,
+          customerPhone: customerRow?.phone || profile.phone,
           cancelledBy: isOwner ? 'Customer' : 'Admin',
           reason,
+          totalAmount: updated?.total || order.total,
         });
         if (sellerUser?.email) {
           await sendOrderCancelledSellerAlertEmail(env, {

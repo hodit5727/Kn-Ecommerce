@@ -135,10 +135,13 @@ export async function grantSellerAccess(supabase, userId, env = null) {
     console.warn('[seller-access] profile reload warning:', profileError.message);
   }
 
-  const sellerId = updatedProfile?.business_id || null;
+  const suffix = updatedProfile?.business_id
+    ? String(updatedProfile.business_id).replace(/^KN[CS]R-/, '')
+    : id.slice(0, 6).toUpperCase();
+  const sellerId = `KNSR-${suffix}`;
 
   // (4) Non-blocking approval email with the permanent unique Seller ID
-  if (env && sellerId && updatedProfile?.email) {
+  if (env && updatedProfile?.email) {
     sendSellerApprovedEmail(env, {
       to: updatedProfile.email,
       fullName: updatedProfile.full_name || seller.seller_name || 'Artisan',

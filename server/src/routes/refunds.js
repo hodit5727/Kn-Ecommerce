@@ -27,7 +27,11 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { isApprovedSeller as isSeller } from '../middleware/seller.js';
 import { writeAudit } from '../lib/audit.js';
 import { validate } from '../lib/schema.js';
-import { sendRefundRequestedAdminAlertEmail, sendRefundStatusCustomerEmail } from '../lib/mail.js';
+import {
+  sendRefundRequestedCustomerEmail,
+  sendRefundRequestedAdminAlertEmail,
+  sendRefundStatusCustomerEmail,
+} from '../lib/mail.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -355,20 +359,40 @@ export function createRefundsRouter({ env, supabase }) {
     const refundRow = ctx.refunds.find((r) => r.id === refundId);
     const retRow = ctx.returns.find((r) => r.id === retId);
 
-    // Trigger admin alert email (non-blocking)
+    // Trigger customer confirmation & admin alert emails (non-blocking)
     (async () => {
       try {
         const order = ctx.orderById.get(orderId);
         const orderCode = order ? `ORD-${order.order_number}` : orderId;
-        await sendRefundRequestedAdminAlertEmail(env, {
-          orderCode,
-          customerName: profile.full_name || 'Customer',
-          refundAmount,
-          reason,
-        });
+        const mailJobs = [];
+
+        if (profile.email) {
+          mailJobs.push(
+            sendRefundRequestedCustomerEmail(env, {
+              to: profile.email,
+              customerName: profile.full_name || 'Valued Customer',
+              orderCode,
+              refundAmount,
+              reason,
+            })
+          );
+        }
+
+        mailJobs.push(
+          sendRefundRequestedAdminAlertEmail(env, {
+            orderCode,
+            customerName: profile.full_name || 'Customer',
+            customerEmail: profile.email,
+            customerPhone: profile.phone,
+            refundAmount,
+            reason,
+          })
+        );
+
+        await Promise.allSettled(mailJobs);
       } catch (mailErr) {
         // eslint-disable-next-line no-console
-        console.warn('[refunds] admin alert failed:', mailErr?.message || mailErr);
+        console.warn('[refunds] refund alert emails failed:', mailErr?.message || mailErr);
       }
     })();
 

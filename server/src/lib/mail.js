@@ -34,6 +34,9 @@ function getTransport(env) {
   }
   if (!transport) {
     transport = nodemailer.createTransport({
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
       host: env.SMTP.host,
       port: env.SMTP.port,
       secure: env.SMTP.port === 465,
@@ -312,12 +315,17 @@ export async function sendOrderPlacedCustomerEmail(env, { to, orderCode, custome
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
-    const itemRows = items.map((i) => `
+    const itemRows = items.map((i) => {
+      const name = i.product_name || i.productName || i.name || 'Campus Product';
+      const qty = i.quantity || i.qty || 1;
+      const amount = Number(i.line_total || i.lineTotal || (i.price * qty)) || 0;
+      return `
       <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #f0ebe4; font-size: 13px;">${i.product_name || i.name} × ${i.quantity}</td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #f0ebe4; text-align: right; font-size: 13px; font-weight: 600;">₹${Number(i.line_total || (i.price * i.quantity)) || 0}</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f0ebe4; font-size: 13px;">${name} × ${qty}</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f0ebe4; text-align: right; font-size: 13px; font-weight: 600;">₹${amount}</td>
       </tr>
-    `).join('');
+      `;
+    }).join('');
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 28px 20px; background: #FFF9F2; color: #1c1917; border-radius: 18px; border: 1px solid #E8DCCF;">
@@ -347,6 +355,7 @@ export async function sendOrderPlacedCustomerEmail(env, { to, orderCode, custome
       to,
       subject: `Order Confirmed: ${orderCode} — K-SHOP`,
       html,
+      text: `Hello ${customerName}, your Cash on Delivery order ${orderCode} has been placed successfully. Total Payable: ₹${totalAmount}.`,
     });
   } catch (err) {
     console.warn('[mail] Failed customer order email:', err?.message || err);
@@ -354,22 +363,24 @@ export async function sendOrderPlacedCustomerEmail(env, { to, orderCode, custome
   }
 }
 
-export async function sendOrderPlacedAdminAlertEmail(env, { orderCode, customerName, customerEmail, customerPhone, totalAmount, storeName }) {
+export async function sendOrderPlacedAdminAlertEmail(env, { orderCode, customerName, customerEmail, customerPhone, totalAmount, storeName, itemCount }) {
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
     const adminEmail = env.ADMIN_BOOTSTRAP_EMAIL || 'hodit5727@gmail.com';
 
+    const contactStr = [customerPhone, customerEmail].filter(Boolean).join(' • ') || 'N/A';
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #fafaf9; border-radius: 14px; border: 1px solid #e7e5e4;">
         <h2 style="color: #8F0025; font-size: 18px; margin: 0 0 12px;">📦 New Customer Order Placed</h2>
         <p style="font-size: 13px; color: #292524; line-height: 1.5; margin: 0 0 14px;">
-          Order <strong>${orderCode}</strong> was placed by <strong>${customerName}</strong> (${customerPhone || customerEmail}) for store <strong>${storeName}</strong>.
+          Order <strong>${orderCode}</strong> was placed by <strong>${customerName}</strong> (${contactStr}) for store <strong>${storeName}</strong>.
         </p>
         <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e7e5e4; font-size: 12px; margin-bottom: 16px;">
           <p style="margin: 0 0 6px;"><strong>Order ID:</strong> ${orderCode}</p>
           <p style="margin: 0 0 6px;"><strong>COD Amount:</strong> ₹${totalAmount}</p>
-          <p style="margin: 0;"><strong>Customer Contact:</strong> ${customerPhone} • ${customerEmail}</p>
+          ${itemCount ? `<p style="margin: 0 0 6px;"><strong>Items Count:</strong> ${itemCount}</p>` : ''}
+          <p style="margin: 0;"><strong>Customer Contact:</strong> ${contactStr}</p>
         </div>
         <p style="font-size: 12px; color: #78716c; margin: 0;">Access Admin Orders Governance to view details or assign dispatch personnel.</p>
       </div>
@@ -380,6 +391,7 @@ export async function sendOrderPlacedAdminAlertEmail(env, { orderCode, customerN
       to: adminEmail,
       subject: `[Order Alert] New Order ${orderCode} (₹${totalAmount}) — K-SHOP`,
       html,
+      text: `New Order Placed: ${orderCode}\nCustomer: ${customerName} (${contactStr})\nStore: ${storeName}\nTotal Amount: ₹${totalAmount}\nReview at /admin/orders`,
     });
   } catch (err) {
     console.warn('[mail] Failed admin order alert:', err?.message || err);
@@ -442,17 +454,35 @@ export async function sendOrderCancelledCustomerEmail(env, { to, orderCode, cust
   }
 }
 
-export async function sendOrderCancelledAdminAlertEmail(env, { orderCode, customerName, cancelledBy, reason }) {
+export async function sendOrderCancelledAdminAlertEmail(env, { orderCode, customerName, customerEmail, customerPhone, cancelledBy, reason, totalAmount }) {
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
     const adminEmail = env.ADMIN_BOOTSTRAP_EMAIL || 'hodit5727@gmail.com';
+    const contactStr = [customerPhone, customerEmail].filter(Boolean).join(' • ') || 'N/A';
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #fff1f2; border-radius: 14px; border: 1px solid #fecdd3;">
+        <h2 style="color: #be123c; font-size: 18px; margin: 0 0 12px;">🚫 Order Cancelled Alert</h2>
+        <p style="font-size: 13px; color: #4c0519; line-height: 1.5; margin: 0 0 14px;">
+          Order <strong>${orderCode}</strong> was cancelled by <strong>${cancelledBy || 'Customer'}</strong>.
+        </p>
+        <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #fecdd3; font-size: 12px; margin-bottom: 16px;">
+          <p style="margin: 0 0 6px;"><strong>Order ID:</strong> ${orderCode}</p>
+          <p style="margin: 0 0 6px;"><strong>Customer:</strong> ${customerName || 'Customer'} (${contactStr})</p>
+          ${totalAmount ? `<p style="margin: 0 0 6px;"><strong>Order Value:</strong> ₹${totalAmount}</p>` : ''}
+          <p style="margin: 0;"><strong>Reason:</strong> ${reason || 'N/A'}</p>
+        </div>
+        <p style="font-size: 12px; color: #9f1239; margin: 0;">Reserved items have been returned to active catalog inventory.</p>
+      </div>
+    `;
 
     return await t.sendMail({
       from: { name: env.SMTP.fromName || 'K-Shop Orders', address: env.SMTP.from || env.SMTP.user },
       to: adminEmail,
       subject: `[Order Cancelled] ${orderCode} — K-SHOP`,
-      text: `Order ${orderCode} by ${customerName} was cancelled by ${cancelledBy}. Reason: ${reason || 'N/A'}`,
+      html,
+      text: `Order ${orderCode} by ${customerName} was cancelled by ${cancelledBy}. Reason: ${reason || 'N/A'}. Contact: ${contactStr}`,
     });
   } catch (err) {
     console.warn('[mail] Failed admin cancel alert:', err?.message || err);
@@ -477,17 +507,35 @@ export async function sendOrderCancelledSellerAlertEmail(env, { to, orderCode, s
   }
 }
 
-export async function sendOrderDeliveredAdminAlertEmail(env, { orderCode, customerName, totalAmount, storeName }) {
+export async function sendOrderDeliveredAdminAlertEmail(env, { orderCode, customerName, customerEmail, customerPhone, totalAmount, storeName }) {
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
     const adminEmail = env.ADMIN_BOOTSTRAP_EMAIL || 'hodit5727@gmail.com';
+    const contactStr = [customerPhone, customerEmail].filter(Boolean).join(' • ') || 'N/A';
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #ecfdf5; border-radius: 14px; border: 1px solid #a7f3d0;">
+        <h2 style="color: #065f46; font-size: 18px; margin: 0 0 12px;">✅ Order Delivered & Cash Collected</h2>
+        <p style="font-size: 13px; color: #064e3b; line-height: 1.5; margin: 0 0 14px;">
+          Order <strong>${orderCode}</strong> has been successfully handed over and Cash on Delivery collected by courier personnel.
+        </p>
+        <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #a7f3d0; font-size: 12px; margin-bottom: 16px;">
+          <p style="margin: 0 0 6px;"><strong>Order ID:</strong> ${orderCode}</p>
+          <p style="margin: 0 0 6px;"><strong>Store:</strong> ${storeName || 'Campus Merchant'}</p>
+          <p style="margin: 0 0 6px;"><strong>Customer:</strong> ${customerName || 'Customer'} (${contactStr})</p>
+          <p style="margin: 0; font-size: 14px; font-weight: bold; color: #065f46;">COD Amount Collected: ₹${totalAmount}</p>
+        </div>
+        <p style="font-size: 12px; color: #047857; margin: 0;">Escrow entry and merchant payout ledger have been mapped.</p>
+      </div>
+    `;
 
     return await t.sendMail({
       from: { name: env.SMTP.fromName || 'K-Shop Delivery', address: env.SMTP.from || env.SMTP.user },
       to: adminEmail,
       subject: `[Delivered & Collected] Order ${orderCode} (₹${totalAmount}) — K-SHOP`,
-      text: `Order ${orderCode} for ${storeName} was delivered to ${customerName}. COD cash of ₹${totalAmount} collected and escrow mapped.`,
+      html,
+      text: `Order ${orderCode} for ${storeName} was delivered to ${customerName} (${contactStr}). COD cash of ₹${totalAmount} collected and escrow mapped.`,
     });
   } catch (err) {
     console.warn('[mail] Failed admin delivery alert:', err?.message || err);
@@ -527,20 +575,79 @@ export async function sendOrderDeliveredSellerRevenueEmail(env, { to, orderCode,
 }
 
 /**
- * ─── REFUND EMAILS ─────────────────────────────────────────────────────────
+ * ─── REFUND & RETURN EMAILS ────────────────────────────────────────────────
  */
 
-export async function sendRefundRequestedAdminAlertEmail(env, { orderCode, customerName, refundAmount, reason }) {
+export async function sendRefundRequestedCustomerEmail(env, { to, customerName, orderCode, refundAmount, reason }) {
+  try {
+    if (!env?.SMTP?.host || !to) return null;
+    const t = getTransport(env);
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 28px 20px; background: #FFF9F2; color: #1c1917; border-radius: 18px; border: 1px solid #E8DCCF;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #8F0025; font-size: 22px; margin: 0; font-family: serif;">K-SHOP</h1>
+          <p style="font-size: 10px; text-transform: uppercase; color: #B8860B; margin: 2px 0 0; font-weight: bold; letter-spacing: 1.5px;">Return & Refund Portal</p>
+        </div>
+        <div style="background: #ffffff; border-radius: 14px; padding: 22px; border: 1px solid #E8DCCF;">
+          <h2 style="font-size: 17px; margin: 0 0 10px; color: #1c1917;">Return Request Received</h2>
+          <p style="font-size: 13px; color: #44403c; line-height: 1.5; margin: 0 0 16px;">
+            Hello <strong>${customerName || 'Valued Patron'}</strong>, your return/refund claim for order <strong>${orderCode}</strong> has been submitted and is currently being reviewed by our campus quality desk.
+          </p>
+          <div style="background: #F8F5F0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <p style="margin: 0 0 6px; font-size: 12px; color: #6B625C;"><strong>Order Reference:</strong> ${orderCode}</p>
+            <p style="margin: 0 0 6px; font-size: 12px; color: #6B625C;"><strong>Estimated Refund:</strong> ₹${refundAmount}</p>
+            <p style="margin: 0; font-size: 12px; color: #6B625C;"><strong>Reason:</strong> ${reason || 'Customer Return'}</p>
+          </div>
+          <p style="font-size: 12px; line-height: 1.5; color: #78716c; margin: 0;">
+            A campus representative will coordinate item inspection and pickup. Once approved, the refund will be credited to your account or settled in cash as per campus guidelines.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return await t.sendMail({
+      from: { name: env.SMTP.fromName || 'K-Shop Support', address: env.SMTP.from || env.SMTP.user },
+      to,
+      subject: `Return Request Received: ${orderCode} — K-SHOP`,
+      html,
+      text: `Hello ${customerName || 'Valued Patron'}, your return request for order ${orderCode} (Refund: ₹${refundAmount}) has been received and is under review. Reason: ${reason || 'N/A'}.`,
+    });
+  } catch (err) {
+    console.warn('[mail] Failed customer refund request email:', err?.message || err);
+    return null;
+  }
+}
+
+export async function sendRefundRequestedAdminAlertEmail(env, { orderCode, customerName, customerEmail, customerPhone, refundAmount, reason }) {
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
     const adminEmail = env.ADMIN_BOOTSTRAP_EMAIL || 'hodit5727@gmail.com';
+    const contactStr = [customerPhone, customerEmail].filter(Boolean).join(' • ') || 'N/A';
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #fffbeb; border-radius: 14px; border: 1px solid #fde68a;">
+        <h2 style="color: #92400e; font-size: 18px; margin: 0 0 12px;">⚠️ New Refund / Return Claim Requested</h2>
+        <p style="font-size: 13px; color: #451a03; line-height: 1.5; margin: 0 0 14px;">
+          Customer <strong>${customerName}</strong> has filed a return/refund request for order <strong>${orderCode}</strong>.
+        </p>
+        <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #fde68a; font-size: 12px; margin-bottom: 16px;">
+          <p style="margin: 0 0 6px;"><strong>Order ID:</strong> ${orderCode}</p>
+          <p style="margin: 0 0 6px;"><strong>Claim Amount:</strong> ₹${refundAmount}</p>
+          <p style="margin: 0 0 6px;"><strong>Customer:</strong> ${customerName} (${contactStr})</p>
+          <p style="margin: 0;"><strong>Reason:</strong> ${reason || 'N/A'}</p>
+        </div>
+        <p style="font-size: 12px; color: #78350f; margin: 0;">Adjudicate, approve, or reject this claim via Admin Refunds Governance at /admin/refunds.</p>
+      </div>
+    `;
 
     return await t.sendMail({
       from: { name: env.SMTP.fromName || 'K-Shop Refunds', address: env.SMTP.from || env.SMTP.user },
       to: adminEmail,
       subject: `[Refund Requested] Order ${orderCode} (₹${refundAmount}) — K-SHOP`,
-      text: `Customer ${customerName} has requested a refund of ₹${refundAmount} for order ${orderCode}. Reason: ${reason}. Please adjudicate at /admin/refunds.`,
+      html,
+      text: `Customer ${customerName} has requested a refund of ₹${refundAmount} for order ${orderCode}. Contact: ${contactStr}. Reason: ${reason}. Please adjudicate at /admin/refunds.`,
     });
   } catch (err) {
     console.warn('[mail] Failed admin refund alert:', err?.message || err);
@@ -581,17 +688,35 @@ export async function sendRefundStatusCustomerEmail(env, { to, orderCode, custom
  * ─── SELLER & PRODUCT VERIFICATION EMAILS ──────────────────────────────────
  */
 
-export async function sendSellerApplicationAdminAlertEmail(env, { applicantName, storeName, email, mobile }) {
+export async function sendSellerApplicationAdminAlertEmail(env, { applicantName, storeName, email, mobile, category, businessType }) {
   try {
     if (!env?.SMTP?.host) return null;
     const t = getTransport(env);
     const adminEmail = env.ADMIN_BOOTSTRAP_EMAIL || 'hodit5727@gmail.com';
 
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; background: #fafaf9; border-radius: 14px; border: 1px solid #e7e5e4;">
+        <h2 style="color: #8F0025; font-size: 18px; margin: 0 0 12px;">🏪 New Seller Application Submitted</h2>
+        <p style="font-size: 13px; color: #292524; line-height: 1.5; margin: 0 0 14px;">
+          A new merchant application has been submitted for store <strong>${storeName}</strong> by <strong>${applicantName || 'Applicant'}</strong>.
+        </p>
+        <div style="background: #ffffff; padding: 14px; border-radius: 10px; border: 1px solid #e7e5e4; font-size: 12px; margin-bottom: 16px;">
+          <p style="margin: 0 0 6px;"><strong>Store Name:</strong> ${storeName}</p>
+          <p style="margin: 0 0 6px;"><strong>Applicant Name:</strong> ${applicantName}</p>
+          <p style="margin: 0 0 6px;"><strong>Contact:</strong> ${mobile} • ${email}</p>
+          ${category ? `<p style="margin: 0 0 6px;"><strong>Category:</strong> ${category}</p>` : ''}
+          ${businessType ? `<p style="margin: 0;"><strong>Business Type:</strong> ${businessType}</p>` : ''}
+        </div>
+        <p style="font-size: 12px; color: #78716c; margin: 0;">Review identity documents and approve or reject at Admin Sellers Governance (/admin/sellers).</p>
+      </div>
+    `;
+
     return await t.sendMail({
       from: { name: env.SMTP.fromName || 'K-Shop Accreditation', address: env.SMTP.from || env.SMTP.user },
       to: adminEmail,
       subject: `[New Seller Application] ${storeName} by ${applicantName}`,
-      text: `A new seller application has been submitted by ${applicantName} for store "${storeName}". Contact: ${mobile} • ${email}. Review at /admin/sellers.`,
+      html,
+      text: `A new seller application has been submitted by ${applicantName} for store "${storeName}". Contact: ${mobile} • ${email}. Category: ${category || 'N/A'}. Review at /admin/sellers.`,
     });
   } catch (err) {
     console.warn('[mail] Failed admin seller alert:', err?.message || err);

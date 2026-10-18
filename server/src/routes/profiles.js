@@ -41,6 +41,10 @@ import {
   SELLER_DOCUMENTS_BUCKET,
   verifyStoredObject,
 } from '../lib/uploads.js';
+import {
+  sendSellerSubmissionEmail,
+  sendSellerApplicationAdminAlertEmail,
+} from '../lib/mail.js';
 
 const BUSINESS_TYPES = ['INDIVIDUAL', 'PROPRIETORSHIP', 'REGISTERED_COMPANY'];
 
@@ -360,6 +364,36 @@ export function createProfilesRouter({ env, supabase }) {
       ip: req.ip ?? null,
       metadata: { store_name: storeName, business_type: businessType },
     });
+
+    // Trigger seller application notification emails (non-blocking)
+    (async () => {
+      try {
+        const mailJobs = [];
+        if (profile.email) {
+          mailJobs.push(
+            sendSellerSubmissionEmail(env, {
+              to: profile.email,
+              fullName: profile.full_name,
+              storeName,
+            })
+          );
+        }
+        mailJobs.push(
+          sendSellerApplicationAdminAlertEmail(env, {
+            applicantName: profile.full_name,
+            storeName,
+            email: profile.email,
+            mobile: profile.phone,
+            category: storeCategory,
+            businessType,
+          })
+        );
+        await Promise.allSettled(mailJobs);
+      } catch (mailErr) {
+        // eslint-disable-next-line no-console
+        console.warn('[profiles] seller application email failed:', mailErr?.message || mailErr);
+      }
+    })();
 
     const updated = await loadProfileRow(supabase.service, profile.id);
     return ok(res, {
