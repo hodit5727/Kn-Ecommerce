@@ -138,10 +138,23 @@ export const DeliveryDashboardPage: React.FC = () => {
   const handleMarkDelivered = async (orderId: string) => {
     setIsUpdating(true);
     try {
-      await deliveryService.markAsDelivered(orderId);
+      const updatedOrder = await deliveryService.markAsDelivered(orderId);
+      // Immediately reflect delivery in local UI state without delay
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                ...updatedOrder,
+                orderStatus: 'COD_DELIVERED',
+                paymentStatus: 'COLLECTED_COD',
+              }
+            : o
+        )
+      );
       showToast('Order confirmed as Delivered! Cash collected successfully.', 'success');
       setActiveOrder(null);
-      await fetchOrders(true);
+      void fetchOrders(true);
     } catch (err: any) {
       showToast(err.message || 'Failed to update order status.', 'error');
     } finally {

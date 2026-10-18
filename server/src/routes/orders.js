@@ -392,109 +392,125 @@ export function createOrdersRouter({ env, supabase }) {
         console.error('[orders] ledger transaction recording failed:', txnErr?.message ?? txnErr);
       }
 
-      // 3. Delivery Confirmation & Escrow Revenue Emails
-      try {
-        const orderCode = formatOrderNumber(order.order_number, order.id);
-        const { data: customerRow } = await supabase.service
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', order.customer_id)
-          .maybeSingle();
+      // 3. Delivery Confirmation & Escrow Revenue Emails (asynchronous background dispatch to prevent HTTP latency)
+      (async () => {
+        try {
+          const orderCode = formatOrderNumber(order.order_number, order.id);
+          const [customerRowRes, sellerRowRes, sellerUserRes] = await Promise.all([
+            supabase.service.from('profiles').select('email, full_name').eq('id', order.customer_id).maybeSingle(),
+            supabase.service.from('seller_profiles').select('store_name').eq('profile_id', order.seller_id).maybeSingle(),
+            supabase.service.from('profiles').select('email').eq('id', order.seller_id).maybeSingle(),
+          ]);
 
-        const { data: sellerRow } = await supabase.service
-          .from('seller_profiles')
-          .select('store_name')
-          .eq('profile_id', order.seller_id)
-          .maybeSingle();
+          const customerRow = customerRowRes?.data;
+          const sellerRow = sellerRowRes?.data;
+          const sellerUser = sellerUserRes?.data;
 
-        const { data: sellerUser } = await supabase.service
-          .from('profiles')
-          .select('email')
-          .eq('id', order.seller_id)
-          .maybeSingle();
+          const storeName = sellerRow?.store_name || 'Campus Merchant';
+          const customerName = customerRow?.full_name || 'Valued Customer';
 
-        const storeName = sellerRow?.store_name || 'Campus Merchant';
-        const customerName = customerRow?.full_name || 'Valued Customer';
+          const mailJobs = [];
+          if (customerRow?.email) {
+            mailJobs.push(
+              sendOrderDeliveredEmail(env, {
+                to: customerRow.email,
+                orderCode,
+                customerName,
+                totalAmount: order.total,
+              })
+            );
+          }
 
-        if (customerRow?.email) {
-          await sendOrderDeliveredEmail(env, {
-            to: customerRow.email,
-            orderCode,
-            customerName,
-            totalAmount: order.total,
-          });
+          mailJobs.push(
+            sendOrderDeliveredAdminAlertEmail(env, {
+              orderCode,
+              customerName,
+              totalAmount: order.total,
+              storeName,
+            })
+          );
+
+          if (sellerUser?.email) {
+            const netAmount = Math.max(0, Math.round((orderTotal - commission) * 100) / 100);
+            mailJobs.push(
+              sendOrderDeliveredSellerRevenueEmail(env, {
+                to: sellerUser.email,
+                orderCode,
+                storeName,
+                totalAmount: order.total,
+                netAmount,
+              })
+            );
+          }
+          await Promise.allSettled(mailJobs);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('[orders] background delivery notification email failed:', e?.message ?? e);
         }
-
-        await sendOrderDeliveredAdminAlertEmail(env, {
-          orderCode,
-          customerName,
-          totalAmount: order.total,
-          storeName,
-        });
-
-        if (sellerUser?.email) {
-          const netAmount = Math.max(0, Math.round((orderTotal - commission) * 100) / 100);
-          await sendOrderDeliveredSellerRevenueEmail(env, {
-            to: sellerUser.email,
-            orderCode,
-            storeName,
-            totalAmount: order.total,
-            netAmount,
-          });
-        }
-      } catch (e) {
-        // non-fatal delivery notification
-      }
+      })();
     }
 
     if (nextDb === 'CANCELLED') {
-      try {
-        const orderCode = formatOrderNumber(order.order_number, order.id);
-        const { data: customerRow } = await supabase.service
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', order.customer_id)
-          .maybeSingle();
-        const { data: sellerRow } = await supabase.service
-          .from('seller_profiles')
-          .select('store_name')
-          .eq('profile_id', order.seller_id)
-          .maybeSingle();
-        const { data: sellerUser } = await supabase.service
-          .from('profiles')
-          .select('email')
-          .eq('id', order.seller_id)
-          .maybeSingle();
+      (async () => {
+        try {
+          const orderCode = formatOrderNumber(order.order_number, order.id);
+          const [customerRowRes, sellerRowRes, sellerUserRes] = await Promise.all([
+            supabase.service.from('profiles').select('email, full_name').eq('id', order.customer_id).maybeSingle(),
+            supabase.service.from('seller_profiles').select('store_name').eq('profile_id', order.seller_id).maybeSingle(),
+            supabase.service.from('profiles').select('email').eq('id', order.seller_id).maybeSingle(),
+          ]);
 
-        const customerName = customerRow?.full_name || 'Valued Customer';
-        if (customerRow?.email) {
-          await sendOrderCancelledCustomerEmail(env, {
-            to: customerRow.email,
-            orderCode,
-            customerName,
-            reason: req.body?.cancelReason || 'Cancelled by merchant or operator',
-          });
+          const customerRow = customerRowRes?.data;
+          const sellerRow = sellerRowRes?.data;
+          const sellerUser = sellerUserRes?.data;
+
+          const customerName = customerRow?.full_name || 'Valued Customer';
+          const mailJobs = [];
+
+          if (customerRow?.email) {
+            mailJobs.push(
+              sendOrderCancelledCustomerEmail(env, {
+                to: customerRow.email,
+                orderCode,
+                customerName,
+                reason: req.body?.cancelReason || 'Cancelled by merchant or operator',
+              })
+            );
+          }
+
+          mailJobs.push(
+            sendOrderCancelledAdminAlertEmail(env, {
+              orderCode,
+              customerName,
+              cancelledBy: req.auth.profile.role,
+              reason: req.body?.cancelReason,
+            })
+          );
+
+          if (sellerUser?.email) {
+            mailJobs.push(
+              sendOrderCancelledSellerAlertEmail(env, {
+                to: sellerUser.email,
+                orderCode,
+                storeName: sellerRow?.store_name || 'Merchant',
+                reason: req.body?.cancelReason,
+              })
+            );
+          }
+          await Promise.allSettled(mailJobs);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('[orders] background cancellation notification email failed:', e?.message ?? e);
         }
-        await sendOrderCancelledAdminAlertEmail(env, {
-          orderCode,
-          customerName,
-          cancelledBy: req.auth.profile.role,
-          reason: req.body?.cancelReason,
-        });
-        if (sellerUser?.email) {
-          await sendOrderCancelledSellerAlertEmail(env, {
-            to: sellerUser.email,
-            orderCode,
-            storeName: sellerRow?.store_name || 'Merchant',
-            reason: req.body?.cancelReason,
-          });
-        }
-      } catch (e) {
-        // non-fatal cancel notification
-      }
+      })();
     }
 
-    const updated = (await fetchRowsOrThrow(supabase, 'orders', 'order reload')).find((o) => o.id === id);
+    const { data: updatedRow } = await supabase.service
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    const updated = updatedRow || { ...order, ...patch };
     const shaped = (await shapeOrders(supabase, [updated], imageBase))[0];
     return ok(res, { order: shaped });
   });
