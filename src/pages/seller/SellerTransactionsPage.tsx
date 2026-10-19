@@ -80,14 +80,23 @@ export const SellerTransactionsPage: React.FC = () => {
 
             {transactions.map((tx) => {
               const isCredit = tx.type === 'CR';
+              const itemDisplay =
+                tx.productReference ||
+                tx.productName ||
+                (tx.productSku ? `SKU: ${tx.productSku}` : '') ||
+                (tx.productId ? `Product (${tx.productId.slice(0, 8)})` : (tx.category === 'SETTLEMENT_PAYOUT' ? 'Settlement Payout' : 'Store Product'));
+
               return (
                 <div
                   key={tx.id}
                   className="bg-white rounded-2xl border border-cream-200 shadow-soft p-4 space-y-3"
                 >
-                  {/* Transaction ID + status */}
+                  {/* Reference ID + status */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
+                        Reference ID
+                      </span>
                       <p className="font-mono text-xs font-semibold text-stone-900 break-all">
                         {tx.transactionNumber}
                       </p>
@@ -101,13 +110,13 @@ export const SellerTransactionsPage: React.FC = () => {
                   </div>
 
                   {/* Description */}
-                  <p className="text-xs text-stone-800 break-words">{tx.description}</p>
+                  <p className="text-xs text-stone-800 break-words font-medium">{tx.description}</p>
 
-                  {/* Requisition */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-stone-500">Requisition</span>
-                    <span className="font-mono text-stone-600 break-all text-right">
-                      {tx.orderNumber || '—'}
+                  {/* Product / Item Reference */}
+                  <div className="flex items-center justify-between text-xs py-1.5 border-t border-cream-100">
+                    <span className="text-stone-500">Product / Item</span>
+                    <span className="font-sans font-semibold text-stone-800 break-all text-right">
+                      {itemDisplay}
                     </span>
                   </div>
 
@@ -155,10 +164,10 @@ export const SellerTransactionsPage: React.FC = () => {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                    <th className="py-4 px-6">Transaction ID</th>
+                    <th className="py-4 px-6">Reference ID</th>
                     <th className="py-4 px-4">Date</th>
                     <th className="py-4 px-4">Description</th>
-                    <th className="py-4 px-4">Requisition</th>
+                    <th className="py-4 px-4">Product / Item Reference</th>
                     <th className="py-4 px-4 text-emerald-700">Credit (CR)</th>
                     <th className="py-4 px-4 text-rosered-600">Debit (DR)</th>
                     <th className="py-4 px-4">Ledger Balance</th>
@@ -168,14 +177,22 @@ export const SellerTransactionsPage: React.FC = () => {
                 <tbody className="divide-y divide-cream-100 font-mono">
                   {transactions.map((tx) => {
                     const isCredit = tx.type === 'CR';
+                    const itemDisplay =
+                      tx.productReference ||
+                      tx.productName ||
+                      (tx.productSku ? `SKU: ${tx.productSku}` : '') ||
+                      (tx.productId ? `Product (${tx.productId.slice(0, 8)})` : (tx.category === 'SETTLEMENT_PAYOUT' ? 'Settlement Payout' : 'Store Product'));
+
                     return (
                       <tr key={tx.id} className="hover:bg-cream-50/40 transition-colors">
                         <td className="py-4 px-6 font-semibold text-stone-900">{tx.transactionNumber}</td>
                         <td className="py-4 px-4 text-stone-500 font-sans text-[11px]">
                           {new Date(tx.createdAt).toLocaleDateString()}
                         </td>
-                        <td className="py-4 px-4 font-sans text-stone-800 text-xs">{tx.description}</td>
-                        <td className="py-4 px-4 text-stone-600">{tx.orderNumber || '—'}</td>
+                        <td className="py-4 px-4 font-sans text-stone-800 text-xs font-medium">{tx.description}</td>
+                        <td className="py-4 px-4 font-sans text-stone-700 font-medium">
+                          {itemDisplay}
+                        </td>
                         <td className="py-4 px-4 font-bold text-emerald-700">
                           {isCredit ? `+${formatINR(tx.amount)}` : '—'}
                         </td>

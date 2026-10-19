@@ -10,12 +10,17 @@ export type TransactionCategory =
 export interface FinancialTransaction {
   id: string;
   transactionNumber: string;
+  referenceId?: string;
   sellerId?: string;
   sellerName?: string;
   customerId?: string;
   customerName?: string;
   orderId?: string;
   orderNumber?: string;
+  productId?: string;
+  productName?: string;
+  productSku?: string;
+  productReference?: string;
   type: TransactionType; // CR or DR
   category: TransactionCategory;
   description: string;
