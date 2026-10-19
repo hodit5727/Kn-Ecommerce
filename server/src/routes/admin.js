@@ -1140,11 +1140,15 @@ export function createAdminManagementRouter({ env, supabase }) {
       throw httpError(502, 'Unable to release settlement payout.');
     }
 
-    // 2. Double-entry ledger: PAYOUT debit (95%) + COMMISSION credit (5%)
+    // 2. Double-entry ledger: PAYOUT debit (95%) + Platform commission record (5%)
     try {
-      const { data: allTxns } = await supabase.service.from('transactions').select('balance_after');
-      const prevBalance = (allTxns ?? []).reduce((max, t) => Math.max(max, Number(t.balance_after) || 0), 0);
-      const newBalance = Math.max(0, Math.round((prevBalance - netAmount) * 100) / 100);
+      const { data: allTxns } = await supabase.service.from('transactions').select('entry, amount, txn_type');
+      const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
+        if (t.txn_type === 'COMMISSION') return bal;
+        const amt = Number(t.amount) || 0;
+        return t.entry === 'CREDIT' ? bal + amt : bal - amt;
+      }, 0);
+      const newBalance = Math.max(0, Math.round((currentTreasury - netAmount) * 100) / 100);
 
       const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
       const txnRef = `TXN-${cryptoTxnDigits}`;
@@ -1171,13 +1175,13 @@ export function createAdminManagementRouter({ env, supabase }) {
         created_at: now,
       });
 
-      // (b) Platform commission fee credit (5%)
+      // (b) Platform commission fee record (5%) — belongs to platform central treasury, never the seller
       if (commAmount > 0) {
         await supabase.service.from('transactions').insert({
           id: crypto.randomUUID(),
           txn_ref: `TXN-${String(crypto.randomInt(1000000000, 10000000000))}`,
           order_id: found.order_id,
-          seller_id: found.seller_id,
+          seller_id: null,
           txn_type: 'COMMISSION',
           entry: 'CREDIT',
           amount: commAmount,

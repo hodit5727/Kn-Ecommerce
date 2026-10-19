@@ -354,12 +354,13 @@ export function createOrdersRouter({ env, supabase }) {
           if (!existingTxns || existingTxns.length === 0) {
             const { data: allTxns } = await supabase.service
               .from('transactions')
-              .select('balance_after');
-            const prevBalance = (allTxns ?? []).reduce(
-              (max, t) => Math.max(max, Number(t.balance_after) || 0),
-              0,
-            );
-            const newBalance = Math.round((prevBalance + orderTotal) * 100) / 100;
+              .select('entry, amount, txn_type');
+            const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
+              if (t.txn_type === 'COMMISSION') return bal;
+              const amt = Number(t.amount) || 0;
+              return t.entry === 'CREDIT' ? bal + amt : bal - amt;
+            }, 0);
+            const newBalance = Math.round((currentTreasury + orderTotal) * 100) / 100;
 
             const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
             const txnRef = `TXN-${cryptoTxnDigits}`;

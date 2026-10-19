@@ -82,13 +82,14 @@ export function createTransactionsRouter({ env, supabase }) {
     const all = rows ?? [];
 
     const isSellerViewer = isSeller(profile);
+    const ordersWithPayout = new Set(all.filter((t) => t.txn_type === 'PAYOUT' && t.order_id).map((t) => t.order_id));
 
     // Server-side scope — query params are never trusted for this (§5-77).
     let scoped = all;
     if (profile.role === 'ADMIN') {
-      // all rows
+      scoped = all.filter((t) => !(t.txn_type === 'COMMISSION' && ordersWithPayout.has(t.order_id)));
     } else if (isSellerViewer) {
-      scoped = all.filter((t) => t.seller_id === profile.id);
+      scoped = all.filter((t) => t.seller_id === profile.id && !(t.txn_type === 'COMMISSION' && ordersWithPayout.has(t.order_id)));
     } else {
       scoped = all.filter((t) => t.customer_id === profile.id);
     }
@@ -126,46 +127,92 @@ export function createTransactionsRouter({ env, supabase }) {
     const orderNumberById = new Map(orderRows.map((o) => [o.id, o.order_number ?? '']));
     const profileById = new Map(profileRows.map((p) => [p.id, p]));
 
-    const transactions = scoped
-      .map((t) => {
-        const orderNumber = orderNumberById.get(t.order_id);
-        const matchingItems = (itemRows ?? []).filter((it) => {
-          if (it.order_id !== t.order_id) return false;
-          if (isSellerViewer && t.seller_id) return it.seller_id === t.seller_id;
-          return true;
-        });
-        const firstItem = matchingItems[0] || null;
-        const productId = firstItem?.product_id || undefined;
-        const productName = firstItem?.product_name || undefined;
-        const productSku = firstItem?.sku || undefined;
-        const productReference = productName
-          ? `${productName}${productSku ? ` (${productSku})` : ''}`
-          : (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
+    // Chronological order for accurate running-balance accumulation
+    const chronological = [...scoped].sort((a, b) =>
+      String(a.created_at ?? '').localeCompare(String(b.created_at ?? ''))
+    );
 
-        return {
-          id: t.id,
-          transactionNumber: t.txn_ref ?? '',
-          referenceId: t.txn_ref ?? '',
-          sellerId: t.seller_id ?? undefined,
-          sellerName: (t.seller_id && profileById.get(t.seller_id)?.full_name) || undefined,
-          customerId: t.customer_id ?? undefined,
-          customerName: (t.customer_id && profileById.get(t.customer_id)?.full_name) || undefined,
-          orderId: t.order_id ?? undefined,
-          orderNumber: (t.order_id && orderNumber) || undefined,
-          productId,
-          productName,
-          productSku,
-          productReference,
-          type: t.entry === 'CREDIT' ? 'CR' : 'DR',
-          category: categoryFor(t),
-          description: descriptionFor(t, orderNumber, isSellerViewer, productName),
-          amount: Number(t.amount) || 0,
-          balanceAfter: Number(t.balance_after) || 0,
-          status: 'POSTED',
-          createdAt: t.created_at ? String(t.created_at) : '',
-        };
-      })
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    let runningAdminBalance = 0;
+    let runningSellerBalance = 0;
+
+    const computedList = chronological.map((t) => {
+      const orderNumber = orderNumberById.get(t.order_id);
+      const matchingItems = (itemRows ?? []).filter((it) => {
+        if (it.order_id !== t.order_id) return false;
+        if (isSellerViewer && t.seller_id) return it.seller_id === t.seller_id;
+        return true;
+      });
+      const firstItem = matchingItems[0] || null;
+      const productId = firstItem?.product_id || undefined;
+      const productName = firstItem?.product_name || undefined;
+      const productSku = firstItem?.sku || undefined;
+      const productReference = productName
+        ? `${productName}${productSku ? ` (${productSku})` : ''}`
+        : (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
+
+      let displayAmount = Number(t.amount) || 0;
+      let balanceAfter = Number(t.balance_after) || 0;
+
+      if (profile.role === 'ADMIN') {
+        if (t.txn_type === 'COMMISSION') {
+          balanceAfter = runningAdminBalance;
+        } else if (t.entry === 'CREDIT') {
+          runningAdminBalance = Math.round((runningAdminBalance + displayAmount) * 100) / 100;
+          balanceAfter = runningAdminBalance;
+        } else {
+          runningAdminBalance = Math.round((runningAdminBalance - displayAmount) * 100) / 100;
+          balanceAfter = runningAdminBalance;
+        }
+      } else if (isSellerViewer) {
+        if (t.txn_type === 'COD_RECEIPT') {
+          // Seller net proceeds (e.g. 95% of gross order total)
+          const comm = t.commission_amount !== undefined && t.commission_amount !== null && Number(t.commission_amount) > 0
+            ? Number(t.commission_amount)
+            : Math.round(displayAmount * 0.05 * 100) / 100;
+          displayAmount = Math.max(0, Math.round((displayAmount - comm) * 100) / 100);
+          runningSellerBalance = Math.round((runningSellerBalance + displayAmount) * 100) / 100;
+          balanceAfter = runningSellerBalance;
+        } else if (t.txn_type === 'PAYOUT') {
+          runningSellerBalance = Math.max(0, Math.round((runningSellerBalance - displayAmount) * 100) / 100);
+          balanceAfter = runningSellerBalance;
+        } else if (t.txn_type === 'COMMISSION') {
+          balanceAfter = Number(t.balance_after) || runningSellerBalance;
+        } else if (t.entry === 'CREDIT') {
+          runningSellerBalance = Math.round((runningSellerBalance + displayAmount) * 100) / 100;
+          balanceAfter = runningSellerBalance;
+        } else {
+          runningSellerBalance = Math.max(0, Math.round((runningSellerBalance - displayAmount) * 100) / 100);
+          balanceAfter = runningSellerBalance;
+        }
+      }
+
+      return {
+        id: t.id,
+        transactionNumber: t.txn_ref ?? '',
+        referenceId: t.txn_ref ?? '',
+        sellerId: t.seller_id ?? undefined,
+        sellerName: (t.seller_id && profileById.get(t.seller_id)?.full_name) || undefined,
+        customerId: t.customer_id ?? undefined,
+        customerName: (t.customer_id && profileById.get(t.customer_id)?.full_name) || undefined,
+        orderId: t.order_id ?? undefined,
+        orderNumber: (t.order_id && orderNumber) || undefined,
+        productId,
+        productName,
+        productSku,
+        productReference,
+        type: t.entry === 'CREDIT' ? 'CR' : 'DR',
+        category: categoryFor(t),
+        description: descriptionFor(t, orderNumber, isSellerViewer, productName),
+        amount: displayAmount,
+        balanceAfter,
+        status: 'POSTED',
+        createdAt: t.created_at ? String(t.created_at) : '',
+      };
+    });
+
+    const transactions = computedList.sort((a, b) =>
+      String(b.createdAt).localeCompare(String(a.createdAt))
+    );
 
     return ok(res, { transactions });
   });

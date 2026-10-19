@@ -101,11 +101,13 @@ function computeBooks({ orders, transactions, payouts, myReturns }, nowIso) {
   const nonVoided = orders.filter((o) => !VOID_ORDER_STATUSES.has(o.status));
 
   const grossSales = round2(nonVoided.reduce((s, o) => s + (Number(o.total) || 0), 0));
-  const platformFeesPaid = round2(
-    transactions
-      .filter((t) => t.txn_type === 'COMMISSION' && t.entry === 'CREDIT')
-      .reduce((s, t) => s + (Number(t.amount) || 0), 0),
-  );
+  const commFromTxns = transactions
+    .filter((t) => t.txn_type === 'COMMISSION' && t.entry === 'CREDIT')
+    .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const commFromPayouts = payouts
+    .filter((p) => p.status === 'RELEASED')
+    .reduce((s, p) => s + (Number(p.commission_amount) || 0), 0);
+  const platformFeesPaid = round2(Math.max(commFromTxns, commFromPayouts));
   const netRevenue = round2(grossSales - platformFeesPaid);
 
   const scheduled = payouts.filter((p) => p.status === 'SCHEDULED');
