@@ -44,6 +44,7 @@ import {
   pushBlinkWindowFrame,
   takeBlinkWindow,
 } from '../../lib/blinkWindow';
+import { compressImageForMobile } from '../../lib/imageCompression';
 import {
   EyeBlinkGate,
   deriveLiveCheckState,
@@ -2406,7 +2407,7 @@ export const SellerVerificationPage: React.FC = () => {
   };
 
   // ── document upload ────────────────────────────────────────────────────────
-  const handleDocPick = (file: File | null) => {
+  const handleDocPick = async (file: File | null) => {
     if (!file) {
       setDocFile(null);
       setDocPreviewUrl(null);
@@ -2416,13 +2417,24 @@ export const SellerVerificationPage: React.FC = () => {
       showToast('Please choose a JPG or PNG photo of your ID.', 'error');
       return;
     }
+    let chosen = file;
     if (file.size > MAX_ID_FILE_BYTES) {
-      showToast('The ID photo must be 2 MB or smaller.', 'error');
+      try {
+        chosen = await compressImageForMobile(file, 1600, 0.85);
+        if (chosen.size > MAX_ID_FILE_BYTES) {
+          chosen = await compressImageForMobile(chosen, 1200, 0.75);
+        }
+      } catch {
+        // fail-safe: keep original
+      }
+    }
+    if (chosen.size > MAX_ID_FILE_BYTES) {
+      showToast('The ID photo must be 2 MB or smaller. Please choose a smaller photo.', 'error');
       return;
     }
-    setDocFile(file);
+    setDocFile(chosen);
     if (docPreviewUrl) URL.revokeObjectURL(docPreviewUrl);
-    setDocPreviewUrl(URL.createObjectURL(file));
+    setDocPreviewUrl(URL.createObjectURL(chosen));
   };
 
   const submitDocument = async () => {
