@@ -82,18 +82,21 @@ export function createAuthRouter({ env, supabase }) {
     let data = null;
     let error = null;
 
-    const emailAttempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: 'email' });
-    if (!emailAttempt.error && emailAttempt.data?.user) {
-      data = emailAttempt.data;
-    } else {
-      // Supabase GoTrue distinguishes between existing user email OTP ('email')
-      // and new user registration OTP ('signup'). Fallback to 'signup' ensures
-      // brand new registrations verify successfully.
-      const signupAttempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: 'signup' });
-      if (!signupAttempt.error && signupAttempt.data?.user) {
-        data = signupAttempt.data;
-      } else {
-        error = emailAttempt.error || signupAttempt.error;
+    // GoTrue token types: 'email' (standard email OTP), 'magiclink' (token from signInWithOtp/magiclink),
+    // and 'signup' (new user signup confirmation). Trying each candidates ensures that regardless of
+    // whether Supabase issued a signup, magiclink, or email token, verification succeeds.
+    const candidateTypes = ['email', 'magiclink', 'signup'];
+    for (const otpType of candidateTypes) {
+      try {
+        const attempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: otpType });
+        if (!attempt.error && attempt.data?.user) {
+          data = attempt.data;
+          error = null;
+          break;
+        }
+        error = attempt.error || error;
+      } catch (e) {
+        error = e;
       }
     }
 
@@ -139,6 +142,50 @@ export function createAuthRouter({ env, supabase }) {
 
     setSessionCookies(res, session, env);
     return ok(res, { requiresProfile: !computeOnboardingComplete(row) });
+  });
+
+  // ── POST /auth/session/token ───────────────────────────────────────────
+  // Exchanges a client-received Supabase auth token (from email magiclink redirect)
+  // for real HttpOnly session cookies after server-side verification.
+  router.post('/auth/session/token', otpVerifyLimiter(), async (req, res) => {
+    const accessToken = typeof req.body?.access_token === 'string' ? req.body.access_token.trim() : '';
+    const refreshToken = typeof req.body?.refresh_token === 'string' ? req.body.refresh_token.trim() : null;
+    if (!accessToken) throw httpError(400, 'Access token is required.');
+
+    const { data, error } = await supabase.anon.auth.getUser(accessToken);
+    if (error || !data?.user) {
+      throw httpError(401, 'Invalid or expired token.');
+    }
+    const user = data.user;
+    const session = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 3600,
+      user,
+    };
+
+    const { error: upsertError } = await supabase.service
+      .from('profiles')
+      .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
+    if (upsertError) {
+      // eslint-disable-next-line no-console
+      console.error('[auth/session/token] profile upsert failed:', upsertError.message);
+      throw httpError(502, 'Unable to complete verification. Please try again later.');
+    }
+
+    const row = await loadProfileRow(supabase.service, user.id);
+    if (row && row.role === 'ADMIN') {
+      throw httpError(
+        403,
+        'This email belongs to an administrator account. Use the admin sign-in instead.',
+      );
+    }
+
+    setSessionCookies(res, session, env);
+    return ok(res, {
+      user: row ? profileToUser(row) : null,
+      requiresProfile: !computeOnboardingComplete(row),
+    });
   });
 
   // ── GET /auth/session ──────────────────────────────────────────────────

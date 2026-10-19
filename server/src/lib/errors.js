@@ -170,6 +170,17 @@ export const ok = (res, data) => res.status(200).json(data);
 import { recordIncident } from './alerting.js';
 
 export function notFoundHandler(req, res) {
+  if (req.path.endsWith('.css')) {
+    res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    return res.status(404).send('/* Not found */');
+  }
+  if (req.path.endsWith('.js')) {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    return res.status(404).send('/* Not found */');
+  }
+  if (req.path.startsWith('/assets/')) {
+    return res.status(404).type('text/plain').send('Not found');
+  }
   res.status(404).json({ error: { message: 'Not found.' } });
 }
 

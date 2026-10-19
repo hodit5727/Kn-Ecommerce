@@ -70,6 +70,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(true);
     try {
+      // 1. Check if user arrived via magic link redirect (#access_token=... in URL hash)
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hash = window.location.hash.startsWith('#')
+          ? window.location.hash.substring(1)
+          : window.location.hash;
+        if (hash.includes('access_token=')) {
+          const params = new URLSearchParams(hash);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          if (accessToken) {
+            // Immediately clean token from browser address bar & history to prevent leakage
+            try {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            } catch {}
+            try {
+              const res = await authService.exchangeToken(accessToken, refreshToken || undefined);
+              if (res.user) {
+                setUser(res.user);
+                setActiveRole(res.user.role);
+                setSessionError(null);
+                setIsLoading(false);
+                return;
+              }
+            } catch {
+              // Stale or invalid token, fall through to regular session verification
+            }
+          }
+        }
+      }
+
       const sessionUser = await authService.getSession();
       setUser(sessionUser);
       setActiveRole(sessionUser ? sessionUser.role : 'CUSTOMER');

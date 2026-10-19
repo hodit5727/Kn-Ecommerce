@@ -87,6 +87,13 @@ export const authService = {
     });
   },
 
+  /** Exchange client-side magiclink access token for authenticated session cookies. */
+  async exchangeToken(accessToken: string, refreshToken?: string): Promise<{ requiresProfile: boolean; user: UserProfile | null }> {
+    return apiRequest<{ requiresProfile: boolean; user: UserProfile | null }>('/auth/session/token', {
+      body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
+    });
+  },
+
   /** New (or incomplete-profile) users set their PIN here. Server hashes it. */
   async setupPin(email: string, pin: string): Promise<PinSetupResponse> {
     return apiRequest<PinSetupResponse>('/auth/pin/setup', {

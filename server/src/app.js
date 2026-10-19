@@ -242,6 +242,36 @@ export function createApp({ env, supabase, verification = null }) {
       },
     }));
 
+    // Handle stale or missing assets under /assets/
+    app.use('/assets', (req, res) => {
+      // If browser requested an older index-*.css hash that was purged in a new deploy,
+      // serve the active index-*.css so layout never un-styles and MIME type is valid text/css.
+      const assetFile = req.path.replace(/^\//, '');
+      if (/^index-.*\.css$/i.test(assetFile)) {
+        try {
+          const files = fs.readdirSync(path.join(distDir, 'assets'));
+          const activeCss = files.find((f) => /^index-.*\.css$/i.test(f));
+          if (activeCss) {
+            res.setHeader('Content-Type', 'text/css; charset=utf-8');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            return res.sendFile(path.join(distDir, 'assets', activeCss));
+          }
+        } catch {}
+      }
+
+      // Strict MIME compliance: never allow missing CSS/JS to return application/json
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      if (req.path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+        return res.status(404).send('/* CSS asset not found */');
+      }
+      if (req.path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        return res.status(404).send('/* JS asset not found */');
+      }
+      return res.status(404).type('text/plain').send('Asset not found');
+    });
+
     app.use(async (req, res, next) => {
       if (req.method !== 'GET') return next();
       if (

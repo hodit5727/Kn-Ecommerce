@@ -758,3 +758,54 @@ test('forgot PIN is rate limited (3 / 15 min) per account+IP → 429', async (t)
   assert.equal(fourth.status, 429);
   assert.equal(typeof fourth.body.error.message, 'string');
 });
+
+test('POST /auth/session/token validates access token and sets session cookies', async (t) => {
+  const fake = createFakeSupabase();
+  const { server, base } = await makeServer(fake);
+  t.after(() => server.close());
+
+  // Missing access token → 400
+  const missing = await request(base, '/api/v1/auth/session/token', {
+    method: 'POST',
+    body: {},
+  });
+  assert.equal(missing.status, 400);
+
+  // Invalid access token → 401
+  const invalid = await request(base, '/api/v1/auth/session/token', {
+    method: 'POST',
+    body: { access_token: 'bogus-token' },
+  });
+  assert.equal(invalid.status, 401);
+
+  // Valid access token → 200 with session cookies set
+  fake.helpers.seedUser({ id: 'tok-usr-1', email: 'magic@test.co' });
+  const valid = await request(base, '/api/v1/auth/session/token', {
+    method: 'POST',
+    body: { access_token: 'at-tok-usr-1', refresh_token: 'rt-tok-usr-1' },
+  });
+  assert.equal(valid.status, 200);
+  assert.equal(valid.body.requiresProfile, true);
+  const jar = cookieJar(valid);
+  assert.ok(jar.ks_access, 'ks_access cookie must be set');
+});
+
+test('missing static CSS/JS returns 404 with stylesheet/script MIME type, never application/json', async (t) => {
+  const fake = createFakeSupabase();
+  const { server, base } = await makeServer(fake);
+  t.after(() => server.close());
+
+  const missingCss = await request(base, '/assets/non-existent-chunk.css');
+  assert.equal(missingCss.status, 404);
+  assert.ok(
+    missingCss.headers.get('content-type')?.includes('text/css'),
+    'missing CSS must return text/css to avoid strict MIME type blocking',
+  );
+
+  const missingJs = await request(base, '/assets/non-existent-chunk.js');
+  assert.equal(missingJs.status, 404);
+  assert.ok(
+    missingJs.headers.get('content-type')?.includes('javascript'),
+    'missing JS must return application/javascript',
+  );
+});
