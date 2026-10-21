@@ -1,0 +1,2 @@
+id,product_id,storage_bucket,storage_path,position,is_primary,mime_type,byte_size,width_px,height_px,image_verdict,image_verdict_meta,created_at
+b936b952-be06-4445-9f62-d67a051d2d59,cff1b932-4377-4bff-91e2-97fb6062b83b,product-images,product-images/1790696562177-a908d419268e70b5ff9fb290.png,0,true,image/png,195630,,,PENDING,{},2026-09-29T15:44:47.153+00:00

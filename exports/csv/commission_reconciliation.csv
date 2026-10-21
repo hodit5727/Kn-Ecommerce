@@ -1,0 +1,4 @@
+order_id,order_number,customer,payment_method,gross_order_total,commission_rate,platform_commission,seller_net_payable,settlement_status,payout_reference,order_date
+44ef2097-d3a5-4076-b421-c01fb3f833eb,KS-20260930-0000001,,Cash on Delivery,975,5%,48.75,926.25,PLACED,PENDING_RELEASE,2026-09-30T09:11:35.938+00:00
+638860a9-4c53-4e5f-8b75-879dee8afac2,KS-20261005-0000002,,Cash on Delivery,975,5%,48.75,926.25,RELEASED,WIRE-KN-573E7839,2026-10-05T09:04:32.445+00:00
+4d88ab60-3a49-43f4-8a1e-85a215515596,KS-20261015-1609805,,Cash on Delivery,975,5%,48.75,926.25,RELEASED,WIRE-KN-6F6EA2F2,2026-10-15T09:55:30.32+00:00

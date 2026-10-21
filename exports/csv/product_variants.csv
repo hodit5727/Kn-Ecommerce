@@ -1,0 +1,3 @@
+id,product_id,sku,size,color,price,stock,is_active,created_at,updated_at
+88ae871e-2ce9-479d-8f98-9f2b3c28cf22,cff1b932-4377-4bff-91e2-97fb6062b83b,PRA-6448-BLACK,,Black,900,5,true,2026-09-29T15:44:47.153+00:00,2026-09-29T15:44:47.153+00:00
+f7caa506-c6a9-470e-818c-67d5ccbd4166,cff1b932-4377-4bff-91e2-97fb6062b83b,PRA-6448-BROWN,,Brown,900,2,true,2026-09-29T15:44:47.153+00:00,2026-10-15T09:55:32.48527+00:00

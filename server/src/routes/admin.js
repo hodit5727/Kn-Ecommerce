@@ -36,11 +36,14 @@
  */
 import { Router } from 'express';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { httpError, ok } from '../lib/errors.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { grantSellerAccess } from '../lib/sellerAccess.js';
 import { writeAudit } from '../lib/audit.js';
 import { productToPublic, formatProductCode } from '../lib/productShape.js';
+import { generateDatabaseExport } from '../lib/databaseExport.js';
 import {
   sendProductReviewedSellerEmail,
   sendSellerRejectedEmail,
@@ -1023,6 +1026,65 @@ export function createAdminManagementRouter({ env, supabase }) {
     });
 
     return ok(res, { success: true });
+  });
+
+  // ── GET /admin/export/excel — Download Master Excel Workbook ────────────
+  router.get('/admin/export/excel', ...adminGate, async (req, res) => {
+    const candidatePaths = [
+      path.resolve(process.cwd(), 'exports/kshop_ecommerce_data_export.xlsx'),
+      path.resolve(process.cwd(), 'public/downloads/kshop_ecommerce_data_export.xlsx'),
+      path.resolve(process.cwd(), '../exports/kshop_ecommerce_data_export.xlsx'),
+      path.resolve(process.cwd(), '../public/downloads/kshop_ecommerce_data_export.xlsx'),
+    ];
+    let foundPath = candidatePaths.find(p => fs.existsSync(p));
+    if (!foundPath || req.query.fresh === 'true') {
+      await generateDatabaseExport(supabase.service);
+      foundPath = candidatePaths.find(p => fs.existsSync(p));
+    }
+    if (!foundPath) {
+      throw httpError(404, 'Excel export workbook could not be generated.');
+    }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="kshop_ecommerce_data_export.xlsx"');
+    return res.sendFile(foundPath);
+  });
+
+  // ── GET /admin/export/zip — Download All Tables in CSV ZIP ─────────────
+  router.get('/admin/export/zip', ...adminGate, async (req, res) => {
+    const candidatePaths = [
+      path.resolve(process.cwd(), 'exports/kshop_database_export_csv.zip'),
+      path.resolve(process.cwd(), 'public/downloads/kshop_database_export_csv.zip'),
+      path.resolve(process.cwd(), '../exports/kshop_database_export_csv.zip'),
+      path.resolve(process.cwd(), '../public/downloads/kshop_database_export_csv.zip'),
+    ];
+    let foundPath = candidatePaths.find(p => fs.existsSync(p));
+    if (!foundPath || req.query.fresh === 'true') {
+      await generateDatabaseExport(supabase.service);
+      foundPath = candidatePaths.find(p => fs.existsSync(p));
+    }
+    if (!foundPath) {
+      throw httpError(404, 'CSV ZIP archive could not be generated.');
+    }
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="kshop_database_export_csv.zip"');
+    return res.sendFile(foundPath);
+  });
+
+  // ── POST /admin/export/generate — Trigger live export on demand ─────────
+  router.post('/admin/export/generate', ...adminGate, async (req, res) => {
+    const result = await generateDatabaseExport(supabase.service);
+    await writeAudit(supabase.service, {
+      userId: req.user?.id,
+      action: 'ADMIN_DATABASE_EXPORT_GENERATED',
+      resourceType: 'database',
+      resourceId: 'all',
+      details: {
+        tableCount: result.tableCount,
+        totalRecords: result.totalRecords,
+      },
+      ipAddress: req.ip,
+    });
+    return ok(res, { success: true, result });
   });
 
   // ── GET /admin/audit-logs — system audit & access stream ───────────────

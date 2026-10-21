@@ -1,0 +1,4 @@
+id,order_id,product_id,variant_id,seller_id,product_name,sku,size,color,unit_price,quantity,line_total,created_at
+770f1576-a98a-4e60-a62a-60ac7b1aa81b,44ef2097-d3a5-4076-b421-c01fb3f833eb,cff1b932-4377-4bff-91e2-97fb6062b83b,f7caa506-c6a9-470e-818c-67d5ccbd4166,f6877863-1247-4dc5-8b2f-6f4f2e953e7e,Fossil Men's Black Dial Leather Strap Watch,PRA-6448-BROWN,,,900,1,900,2026-09-30T09:11:35.938+00:00
+1d3156b0-bef8-43f5-a5c3-27bc3148488c,638860a9-4c53-4e5f-8b75-879dee8afac2,cff1b932-4377-4bff-91e2-97fb6062b83b,f7caa506-c6a9-470e-818c-67d5ccbd4166,f6877863-1247-4dc5-8b2f-6f4f2e953e7e,Fossil Men's Black Dial Leather Strap Watch,PRA-6448-BROWN,,,900,1,900,2026-10-05T09:04:32.445+00:00
+36b6e7b7-7a74-401b-9f18-da042916c427,4d88ab60-3a49-43f4-8a1e-85a215515596,cff1b932-4377-4bff-91e2-97fb6062b83b,f7caa506-c6a9-470e-818c-67d5ccbd4166,f6877863-1247-4dc5-8b2f-6f4f2e953e7e,Fossil Men's Black Dial Leather Strap Watch,PRA-6448-BROWN,,,900,1,900,2026-10-15T09:55:30.32+00:00

@@ -14,7 +14,12 @@ import {
   Landmark,
   Megaphone,
   CheckCircle2,
-  Download
+  Download,
+  FileSpreadsheet,
+  Archive,
+  Database,
+  RefreshCw,
+  Table
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { exportToCsv } from '../../lib/csvExport';
@@ -23,6 +28,10 @@ export const AdminDashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
+  const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
+  const [isRefreshingExport, setIsRefreshingExport] = useState<boolean>(false);
+  const [exportBannerMessage, setExportBannerMessage] = useState<string | null>(null);
 
   const loadMetrics = async () => {
     setIsLoading(true);
@@ -67,6 +76,48 @@ export const AdminDashboardPage: React.FC = () => {
     );
   }
 
+  const handleDownloadExcel = async () => {
+    try {
+      setIsExportingExcel(true);
+      setExportBannerMessage('Preparing and downloading Master Excel workbook (.xlsx)...');
+      await adminService.downloadExcelExport();
+      setExportBannerMessage('Master Excel workbook downloaded successfully.');
+      setTimeout(() => setExportBannerMessage(null), 4000);
+    } catch (err: any) {
+      setExportBannerMessage(`Excel download failed: ${err.message}`);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    try {
+      setIsExportingZip(true);
+      setExportBannerMessage('Packaging and downloading all SQL tables as CSV ZIP archive (.zip)...');
+      await adminService.downloadZipExport();
+      setExportBannerMessage('CSV ZIP archive downloaded successfully.');
+      setTimeout(() => setExportBannerMessage(null), 4000);
+    } catch (err: any) {
+      setExportBannerMessage(`ZIP download failed: ${err.message}`);
+    } finally {
+      setIsExportingZip(false);
+    }
+  };
+
+  const handleGenerateFreshExport = async () => {
+    try {
+      setIsRefreshingExport(true);
+      setExportBannerMessage('Regenerating live export across all 20 database tables...');
+      const res = await adminService.generateFreshExport();
+      setExportBannerMessage(`Fresh export generated! ${res.result.tableCount} tables, ${res.result.totalRecords} total records synchronized.`);
+      setTimeout(() => setExportBannerMessage(null), 5000);
+    } catch (err: any) {
+      setExportBannerMessage(`Export generation failed: ${err.message}`);
+    } finally {
+      setIsRefreshingExport(false);
+    }
+  };
+
   const handleExportSummaryCsv = () => {
     if (!metrics) return;
     exportToCsv(
@@ -104,20 +155,56 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             variant="outline"
             size="sm"
-            onClick={handleExportSummaryCsv}
-            leftIcon={<Download className="w-4 h-4 text-emerald-600" />}
+            onClick={handleDownloadZip}
+            isLoading={isExportingZip}
+            leftIcon={<Archive className="w-4 h-4 text-burgundy" />}
           >
-            Export Executive Summary CSV
+            Download CSVs (.ZIP)
           </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleDownloadExcel}
+            isLoading={isExportingExcel}
+            leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+          >
+            Download Master Excel (.XLSX)
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportSummaryCsv}
+            leftIcon={<Download className="w-4 h-4 text-stone-600" />}
+          >
+            Summary CSV
+          </Button>
+
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
             <CheckCircle2 className="w-4 h-4" /> Platform COD Protocol Nominal
           </span>
         </div>
       </div>
+
+      {exportBannerMessage && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-medium text-amber-900 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-amber-700" />
+            <span>{exportBannerMessage}</span>
+          </div>
+          <button
+            onClick={() => setExportBannerMessage(null)}
+            className="text-amber-700 hover:text-amber-900 font-bold ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Overview Cards Required by prompt:
           Total Orders, Total Customers, Total Sellers, Total Products, Total Revenue, Pending Refunds, Pending Settlements */}
@@ -222,6 +309,95 @@ export const AdminDashboardPage: React.FC = () => {
           <Link to="/admin/announcements" className="text-[11px] text-burgundy hover:underline">
             Broadcast messages →
           </Link>
+        </div>
+      </div>
+
+      {/* Enterprise Database & Ledger Exports Section */}
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200 shadow-soft space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-burgundy" />
+              <h2 className="font-serif font-bold text-lg text-stone-900">
+                PostgreSQL Schema & Comprehensive Ledger Export Suite
+              </h2>
+            </div>
+            <p className="text-xs text-stone-500">
+              Direct live data extraction from production Supabase database. Includes formatted multi-sheet Excel workbook and 21 individual CSV exports with synchronized 5% platform fee accounting.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateFreshExport}
+              isLoading={isRefreshingExport}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 text-stone-600 ${isRefreshingExport ? 'animate-spin' : ''}`} />}
+            >
+              Regenerate Fresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadZip}
+              isLoading={isExportingZip}
+              leftIcon={<Archive className="w-4 h-4 text-burgundy" />}
+            >
+              CSVs (.ZIP)
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleDownloadExcel}
+              isLoading={isExportingExcel}
+              leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+            >
+              Master Excel (.XLSX)
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-stone-900">
+              <Table className="w-4 h-4 text-emerald-600" />
+              <span>Multi-Sheet Workbook</span>
+            </div>
+            <p className="text-stone-500 text-[11px]">
+              22 auto-filtered worksheets covering Executive Dashboard, Products, Orders, Settlements, Treasury Ledger, and Commission Reconciliation.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-stone-900">
+              <Archive className="w-4 h-4 text-burgundy" />
+              <span>21 Clean CSV Tables</span>
+            </div>
+            <p className="text-stone-500 text-[11px]">
+              Consolidated ZIP archive containing individual comma-separated files for every PostgreSQL schema table.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-stone-900">
+              <IndianRupee className="w-4 h-4 text-amber-600" />
+              <span>5% Commission Audited</span>
+            </div>
+            <p className="text-stone-500 text-[11px]">
+              Strict mathematical reconciliation: Gross COD collection, 5% admin retained fee, and 95% net seller wire settlement.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-stone-900">
+              <CheckCircle2 className="w-4 h-4 text-blue-600" />
+              <span>Security Redaction</span>
+            </div>
+            <p className="text-stone-500 text-[11px]">
+              Passcode hashes and authentication secrets are safely redacted to preserve complete platform security compliance.
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -48,6 +48,7 @@
 import type { AdminMetrics, AdminCustomerRecord, AdminSellerRecord, Paged } from '../types/admin';
 import type { Product } from '../types/product';
 import { apiRequest } from '../api/http';
+import { apiConfig } from '../api/config';
 
 interface AdminStatsResponse {
   stats: AdminMetrics;
@@ -292,6 +293,49 @@ export const adminService = {
       method: 'GET',
     });
     return res.logs ?? [];
+  },
+
+  /** Download live master Excel export (.xlsx) */
+  async downloadExcelExport(fresh = false): Promise<void> {
+    const url = `${apiConfig.apiBaseUrl}/admin/export/excel${fresh ? '?fresh=true' : ''}`;
+    const res = await fetch(url, { method: 'GET', credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Excel download failed with status ${res.status}`);
+    }
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'kshop_ecommerce_data_export.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(link);
+  },
+
+  /** Download live CSV ZIP archive (.zip) */
+  async downloadZipExport(fresh = false): Promise<void> {
+    const url = `${apiConfig.apiBaseUrl}/admin/export/zip${fresh ? '?fresh=true' : ''}`;
+    const res = await fetch(url, { method: 'GET', credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `ZIP download failed with status ${res.status}`);
+    }
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'kshop_database_export_csv.zip';
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(link);
+  },
+
+  /** Trigger fresh database export regeneration */
+  async generateFreshExport(): Promise<{ success: boolean; result: { tableCount: number; totalRecords: number } }> {
+    return await apiRequest('/admin/export/generate', { method: 'POST' });
   },
 };
 
