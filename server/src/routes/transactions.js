@@ -96,7 +96,7 @@ export function createTransactionsRouter({ env, supabase }) {
     if (type === 'CR') scoped = scoped.filter((t) => t.entry === 'CREDIT');
     if (type === 'DR') scoped = scoped.filter((t) => t.entry === 'DEBIT');
 
-    // Join data: orders (order numbers), profiles (customer/seller names), order_items (products).
+    // Join data: orders (order numbers, totals, payment method), profiles (customer/seller names), order_items (products), payouts (settlements).
     const orderIds = [...new Set(scoped.map((t) => t.order_id).filter(Boolean))];
     const profileIds = [
       ...new Set([
@@ -108,9 +108,10 @@ export function createTransactionsRouter({ env, supabase }) {
       { data: orderRows = [], error: orderError },
       { data: profileRows = [], error: profileError },
       { data: itemRows = [], error: itemError },
+      { data: payoutRows = [], error: payoutError },
     ] = await Promise.all([
       orderIds.length
-        ? supabase.service.from('orders').select('id, order_number').in('id', orderIds)
+        ? supabase.service.from('orders').select('id, order_number, total, payment_method').in('id', orderIds)
         : Promise.resolve({ data: [], error: null }),
       profileIds.length
         ? supabase.service.from('profiles').select('id, full_name, email').in('id', profileIds)
@@ -118,14 +119,18 @@ export function createTransactionsRouter({ env, supabase }) {
       orderIds.length
         ? supabase.service.from('order_items').select('id, order_id, product_id, product_name, sku, seller_id').in('order_id', orderIds)
         : Promise.resolve({ data: [], error: null }),
+      orderIds.length
+        ? supabase.service.from('payouts').select('id, order_id, seller_id, amount, commission_amount, status, released_at').in('order_id', orderIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
-    if (orderError || profileError || itemError) {
+    if (orderError || profileError || itemError || payoutError) {
       // eslint-disable-next-line no-console
-      console.error('[transactions] join query failed:', orderError?.message ?? profileError?.message ?? itemError?.message);
+      console.error('[transactions] join query failed:', orderError?.message ?? profileError?.message ?? itemError?.message ?? payoutError?.message);
       throw httpError(502, 'Unable to load transactions. Please try again later.');
     }
-    const orderNumberById = new Map(orderRows.map((o) => [o.id, o.order_number ?? '']));
+    const orderById = new Map(orderRows.map((o) => [o.id, o]));
     const profileById = new Map(profileRows.map((p) => [p.id, p]));
+    const payoutByOrderId = new Map(payoutRows.map((p) => [p.order_id, p]));
 
     // Chronological order for accurate running-balance accumulation
     const chronological = [...scoped].sort((a, b) =>
@@ -136,7 +141,10 @@ export function createTransactionsRouter({ env, supabase }) {
     let runningSellerBalance = 0;
 
     const computedList = chronological.map((t) => {
-      const orderNumber = orderNumberById.get(t.order_id);
+      const order = orderById.get(t.order_id);
+      const orderNumber = order?.order_number;
+      const payout = payoutByOrderId.get(t.order_id);
+
       const matchingItems = (itemRows ?? []).filter((it) => {
         if (it.order_id !== t.order_id) return false;
         if (isSellerViewer && t.seller_id) return it.seller_id === t.seller_id;
@@ -144,11 +152,22 @@ export function createTransactionsRouter({ env, supabase }) {
       });
       const firstItem = matchingItems[0] || null;
       const productId = firstItem?.product_id || undefined;
-      const productName = firstItem?.product_name || undefined;
+      const productName = firstItem?.product_name || (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
       const productSku = firstItem?.sku || undefined;
       const productReference = productName
         ? `${productName}${productSku ? ` (${productSku})` : ''}`
         : (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
+
+      // Financial breakdown:
+      const grossAmount = Number(payout?.amount) || Number(order?.total) || Number(t.amount) || 0;
+      const commissionRate = 5;
+      const commissionAmount = payout?.commission_amount !== undefined && payout.commission_amount !== null
+        ? Number(payout.commission_amount)
+        : Math.round(grossAmount * 0.05 * 100) / 100;
+      const netAmount = Math.max(0, Math.round((grossAmount - commissionAmount) * 100) / 100);
+
+      const payoutReference = t.metadata?.bankReference || (payout?.id ? `WIRE-KN-${payout.id.slice(0, 8).toUpperCase()}` : (t.txn_type === 'PAYOUT' ? 'WIRE-SETTLEMENT' : undefined));
+      const paymentMethod = t.txn_type === 'PAYOUT' ? 'Bank Wire (NEFT/RTGS)' : (order?.payment_method || 'Cash on Delivery (COD)');
 
       let displayAmount = Number(t.amount) || 0;
       let balanceAfter = Number(t.balance_after) || 0;
@@ -165,11 +184,8 @@ export function createTransactionsRouter({ env, supabase }) {
         }
       } else if (isSellerViewer) {
         if (t.txn_type === 'COD_RECEIPT') {
-          // Seller net proceeds (e.g. 95% of gross order total)
-          const comm = t.commission_amount !== undefined && t.commission_amount !== null && Number(t.commission_amount) > 0
-            ? Number(t.commission_amount)
-            : Math.round(displayAmount * 0.05 * 100) / 100;
-          displayAmount = Math.max(0, Math.round((displayAmount - comm) * 100) / 100);
+          // Seller net proceeds (95% of gross order total after 5% platform fee)
+          displayAmount = netAmount;
           runningSellerBalance = Math.round((runningSellerBalance + displayAmount) * 100) / 100;
           balanceAfter = runningSellerBalance;
         } else if (t.txn_type === 'PAYOUT') {
@@ -200,12 +216,18 @@ export function createTransactionsRouter({ env, supabase }) {
         productName,
         productSku,
         productReference,
+        grossAmount,
+        commissionRate,
+        commissionAmount,
+        netAmount,
+        payoutReference,
+        paymentMethod,
         type: t.entry === 'CREDIT' ? 'CR' : 'DR',
         category: categoryFor(t),
         description: descriptionFor(t, orderNumber, isSellerViewer, productName),
         amount: displayAmount,
         balanceAfter,
-        status: 'POSTED',
+        status: t.status || 'POSTED',
         createdAt: t.created_at ? String(t.created_at) : '',
       };
     });

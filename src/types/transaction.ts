@@ -21,6 +21,12 @@ export interface FinancialTransaction {
   productName?: string;
   productSku?: string;
   productReference?: string;
+  grossAmount?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  netAmount?: number;
+  payoutReference?: string;
+  paymentMethod?: string;
   type: TransactionType; // CR or DR
   category: TransactionCategory;
   description: string;
