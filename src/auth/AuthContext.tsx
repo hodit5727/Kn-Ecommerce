@@ -40,6 +40,7 @@ interface AuthContextType {
   forgotPin: (email: string) => Promise<{ success: boolean; message: string }>;
   resetPin: (email: string, token: string, pin: string) => Promise<{ success: boolean; message: string }>;
   adminLogin: (email: string, password: string) => Promise<void>;
+  deliveryLogin: (email: string, password: string) => Promise<UserProfile>;
   completeProfile: (payload: OnboardingProfilePayload) => Promise<UserProfile>;
   changePin: (currentPin: string, newPin: string) => Promise<{ success: boolean; message: string }>;
   updateProfile: (data: Partial<OnboardingProfilePayload> & { fullName?: string }) => Promise<UserProfile>;
@@ -183,6 +184,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const interval = setInterval(checkSessionLiveness, 60000);
+    // Proactively refresh tokens before 30/60 minute expiry without session interruption
+    const renewalInterval = setInterval(async () => {
+      if (document.visibilityState === 'visible' && userRef.current) {
+        try {
+          const freshUser = await authService.getSession();
+          if (freshUser) {
+            setUser(freshUser);
+          }
+        } catch {
+          // non-fatal background refresh
+        }
+      }
+    }, 20 * 60 * 1000); // 20 minutes
+
     const onVisibility = () => {
       if (document.visibilityState === 'visible' && userRef.current) {
         void checkSessionLiveness();
@@ -194,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       clearInterval(interval);
+      clearInterval(renewalInterval);
       window.removeEventListener('focus', onVisibility);
       document.removeEventListener('visibilitychange', onVisibility);
     };
@@ -205,8 +221,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveRole('CUSTOMER');
       return;
     }
-    if (user.role === 'ADMIN') {
+    if (user.role === 'ADMIN' || user.roles?.includes('ADMIN') || user.roles?.includes('SUPER_ADMIN')) {
       setActiveRole('ADMIN');
+      return;
+    }
+    if (
+      user.role === 'DELIVERY_PERSON' ||
+      (user.role as any) === 'DELIVERY' ||
+      user.roles?.includes('DELIVERY_PERSON') ||
+      (user.roles as any)?.includes('DELIVERY')
+    ) {
+      setActiveRole('DELIVERY_PERSON');
       return;
     }
     if (user.role === 'SELLER') {
@@ -230,8 +255,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('[auth] Cannot switch to SELLER role: seller accreditation is not approved.');
       }
     } else if (newRole === 'ADMIN') {
-      if (user.role === 'ADMIN' || user.roles?.includes('ADMIN')) {
+      if (user.role === 'ADMIN' || user.roles?.includes('ADMIN') || user.roles?.includes('SUPER_ADMIN')) {
         setActiveRole('ADMIN');
+      }
+    } else if (newRole === 'DELIVERY_PERSON') {
+      const isDelivery =
+        user.role === 'DELIVERY_PERSON' ||
+        (user.role as any) === 'DELIVERY' ||
+        user.roles?.includes('DELIVERY_PERSON') ||
+        (user.roles as any)?.includes('DELIVERY') ||
+        user.role === 'ADMIN';
+      if (isDelivery) {
+        setActiveRole('DELIVERY_PERSON');
       }
     } else {
       setActiveRole('CUSTOMER');
@@ -362,6 +397,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /**
+   * Dedicated delivery operator login (email + password).
+   */
+  const deliveryLogin = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const profile = await authService.deliveryLogin(email, password);
+      const isDelivery =
+        profile.role === 'ADMIN' ||
+        profile.role === 'DELIVERY_PERSON' ||
+        (profile.role as any) === 'DELIVERY' ||
+        profile.roles?.includes('DELIVERY_PERSON') ||
+        (profile.roles as any)?.includes('DELIVERY') ||
+        profile.roles?.includes('ADMIN') ||
+        profile.roles?.includes('SUPER_ADMIN');
+
+      if (!isDelivery) {
+        throw new Error('Delivery operator access denied.');
+      }
+      setUser(profile);
+      setActiveRole(profile.role === 'ADMIN' ? 'ADMIN' : 'DELIVERY_PERSON');
+      setSessionError(null);
+      return profile;
+    } catch (err) {
+      setUser(null);
+      setActiveRole('CUSTOMER');
+      setSessionError(messageFrom(err, 'Delivery operator sign-in failed.'));
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const completeProfile = async (payload: OnboardingProfilePayload) => {
     setIsLoading(true);
     try {
@@ -463,6 +531,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         forgotPin,
         resetPin,
         adminLogin,
+        deliveryLogin,
         completeProfile,
         changePin,
         updateProfile,

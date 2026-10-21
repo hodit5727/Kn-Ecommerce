@@ -95,7 +95,9 @@ export const DeliveryDashboardPage: React.FC = () => {
       const hasDeliveryAccess =
         user.role === 'ADMIN' ||
         user.role === 'DELIVERY_PERSON' ||
+        (user.role as any) === 'DELIVERY' ||
         user.roles?.includes('DELIVERY_PERSON') ||
+        (user.roles as any)?.includes('DELIVERY') ||
         user.roles?.includes('ADMIN') ||
         user.roles?.includes('SUPER_ADMIN');
 

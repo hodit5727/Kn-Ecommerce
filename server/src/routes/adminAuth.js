@@ -41,7 +41,14 @@ export function createAdminRouter({ env, supabase }) {
     const row = await loadProfileRow(supabase.service, user.id);
 
     // Admin role gate — from the DATABASE, never the client.
-    if (!row || row.role !== 'ADMIN') {
+    const isAdmin =
+      row &&
+      (row.role === 'ADMIN' ||
+        row.role === 'SUPER_ADMIN' ||
+        (Array.isArray(row.roles) &&
+          (row.roles.includes('ADMIN') || row.roles.includes('SUPER_ADMIN'))));
+
+    if (!isAdmin) {
       // Never leave a live session behind for a non-admin.
       try {
         await supabase.anon.auth.signOut({ scope: 'global' });
@@ -92,9 +99,12 @@ export function createAdminRouter({ env, supabase }) {
     const isDeliveryStaff =
       row &&
       (row.role === 'ADMIN' ||
+        row.role === 'SUPER_ADMIN' ||
+        row.role === 'DELIVERY' ||
         row.role === 'DELIVERY_PERSON' ||
         (Array.isArray(row.roles) &&
-          (row.roles.includes('DELIVERY_PERSON') ||
+          (row.roles.includes('DELIVERY') ||
+            row.roles.includes('DELIVERY_PERSON') ||
             row.roles.includes('ADMIN') ||
             row.roles.includes('SUPER_ADMIN'))));
 

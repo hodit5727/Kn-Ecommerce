@@ -143,70 +143,150 @@ export const AdminCustomersPage: React.FC = () => {
             : 'No patrons registered yet.'}
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-stone-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-6">Customer ID</th>
-                  <th className="py-4 px-4">Patron Full Name</th>
-                  <th className="py-4 px-4">Direct Email</th>
-                  <th className="py-4 px-4">Direct Contact</th>
-                  <th className="py-4 px-4">Account Status</th>
-                  <th className="py-4 px-4">Total Requisitions</th>
-                  <th className="py-4 px-4">Cumulative Valuation</th>
-                  <th className="py-4 px-4">Seller Status</th>
-                  <th className="py-4 px-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-stone-50/50">
-                    <td className="py-4 px-6">
-                      <div className="font-mono font-bold text-stone-800 text-[11px]">
-                        {c.customerId || '—'}
-                      </div>
-                      {c.sellerId && (
-                        <div className="font-mono text-[10px] text-emerald-700 font-semibold mt-0.5">
-                          Seller: {c.sellerId}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 font-serif font-semibold text-stone-900">{c.fullName}</td>
-                    <td className="py-4 px-4 text-stone-600">{c.email}</td>
-                    <td className="py-4 px-4 font-mono text-stone-600">{c.phone || '—'}</td>
-                    <td className="py-4 px-4">
-                      <Badge variant={c.status === 'ACTIVE' ? 'emerald' : 'rosered'} size="sm" dot>
-                        {c.status}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4 text-stone-700 font-semibold">{c.orderCount} orders</td>
-                    <td className="py-4 px-4 font-bold text-stone-900">
-                      {formatINR(c.totalSpent)}
-                    </td>
-                    <td className="py-4 px-4">
-                      <Badge variant={c.sellerStatus === 'APPROVED' ? 'burgundy' : 'stone'} size="sm">
-                        {c.sellerStatus === 'APPROVED' ? 'Seller Accredited' : 'Customer Only'}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleToggleStatus(c.id, c.fullName)}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
-                          c.status === 'ACTIVE'
-                            ? 'text-rosered-700 hover:bg-rosered-50 border border-rosered-200'
-                            : 'text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
-                        }`}
-                      >
-                        {c.status === 'ACTIVE' ? 'Suspend Access' : 'Reactivate'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-4">
+          {/* Mobile Stacked Cards (Visible on screens < md) */}
+          <div className="md:hidden space-y-3">
+            {customers.map((c) => (
+              <div
+                key={c.id}
+                className="bg-white rounded-2xl border border-stone-200/90 shadow-soft p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
+                      Patron
+                    </span>
+                    <p className="font-serif font-bold text-stone-900 text-sm">{c.fullName}</p>
+                    <p className="font-mono text-[11px] text-stone-500">{c.customerId || '—'}</p>
+                  </div>
+                  <Badge variant={c.status === 'ACTIVE' ? 'emerald' : 'rosered'} size="sm" dot>
+                    {c.status}
+                  </Badge>
+                </div>
+
+                <div className="bg-stone-50/70 rounded-xl p-3 text-xs space-y-1.5 border border-stone-200/80">
+                  <div className="flex items-center justify-between">
+                    <span className="text-stone-500">Email</span>
+                    <span className="font-medium text-stone-900 truncate max-w-[200px]">{c.email}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-stone-500">Phone</span>
+                    <span className="font-mono text-stone-700">{c.phone || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-stone-200/60">
+                    <span className="text-stone-500">Orders / Spent</span>
+                    <span className="font-bold text-stone-900">
+                      {c.orderCount} orders • {formatINR(c.totalSpent)}
+                    </span>
+                  </div>
+                  {c.sellerId && (
+                    <div className="flex items-center justify-between pt-1 border-t border-stone-200/60 text-emerald-800 font-mono text-[11px]">
+                      <span>Seller ID</span>
+                      <span className="font-semibold">{c.sellerId}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <Badge variant={c.sellerStatus === 'APPROVED' ? 'burgundy' : 'stone'} size="sm">
+                    {c.sellerStatus === 'APPROVED' ? 'Seller Accredited' : 'Customer Only'}
+                  </Badge>
+                  <button
+                    onClick={() => handleToggleStatus(c.id, c.fullName)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      c.status === 'ACTIVE'
+                        ? 'text-rosered-700 hover:bg-rosered-50 border border-rosered-200'
+                        : 'text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
+                    }`}
+                  >
+                    {c.status === 'ACTIVE' ? 'Suspend Access' : 'Reactivate'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="px-6 pb-4">
+
+          {/* Desktop Luxury Table (Visible on screens >= md) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-stone-200/90 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50/80 border-b border-stone-200/80 text-[10px] font-bold text-stone-500 uppercase tracking-widest">
+                    <th className="py-4 px-6">Customer ID</th>
+                    <th className="py-4 px-4">Patron Full Name</th>
+                    <th className="py-4 px-4">Direct Email</th>
+                    <th className="py-4 px-4">Direct Contact</th>
+                    <th className="py-4 px-4">Account Status</th>
+                    <th className="py-4 px-4">Total Requisitions</th>
+                    <th className="py-4 px-4">Cumulative Valuation</th>
+                    <th className="py-4 px-4">Seller Status</th>
+                    <th className="py-4 px-6 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {customers.map((c) => (
+                    <tr key={c.id} className="hover:bg-stone-50/60 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="font-mono font-bold text-stone-800 text-[11px]">
+                          {c.customerId || '—'}
+                        </div>
+                        {c.sellerId && (
+                          <div className="font-mono text-[10px] text-emerald-700 font-semibold mt-0.5">
+                            Seller: {c.sellerId}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 font-serif font-semibold text-stone-900">{c.fullName}</td>
+                      <td className="py-4 px-4 text-stone-600">{c.email}</td>
+                      <td className="py-4 px-4 font-mono text-stone-600">{c.phone || '—'}</td>
+                      <td className="py-4 px-4">
+                        <Badge variant={c.status === 'ACTIVE' ? 'emerald' : 'rosered'} size="sm" dot>
+                          {c.status}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-4 text-stone-700 font-semibold">{c.orderCount} orders</td>
+                      <td className="py-4 px-4 font-bold font-mono text-stone-900">
+                        {formatINR(c.totalSpent)}
+                      </td>
+                      <td className="py-4 px-4">
+                        <Badge variant={c.sellerStatus === 'APPROVED' ? 'burgundy' : 'stone'} size="sm">
+                          {c.sellerStatus === 'APPROVED' ? 'Seller Accredited' : 'Customer Only'}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => handleToggleStatus(c.id, c.fullName)}
+                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
+                            c.status === 'ACTIVE'
+                              ? 'text-rosered-700 hover:bg-rosered-50 border border-rosered-200'
+                              : 'text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
+                          }`}
+                        >
+                          {c.status === 'ACTIVE' ? 'Suspend Access' : 'Reactivate'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-4 border-t border-stone-100">
+              <Pagination
+                page={page}
+                perPage={perPage}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={(p) => setPage(p)}
+                onPerPageChange={(n) => {
+                  setPerPage(n);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Mobile Pagination */}
+          <div className="md:hidden bg-white p-3 rounded-2xl border border-stone-200">
             <Pagination
               page={page}
               perPage={perPage}

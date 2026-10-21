@@ -186,7 +186,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 md:pb-12 space-y-6 sm:space-y-8">
+    <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-10 pb-28 md:pb-12 space-y-5 sm:space-y-8">
       {/* Header Banner */}
       <div className="border-b border-cream-200 pb-4 sm:pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -209,17 +209,17 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+      <div className="flex flex-col md:flex-row gap-5 md:gap-8 items-start">
         {/* Customer Sidebar (Mobile: compact toggle drawer; Desktop: sticky column) */}
         <CustomerSidebar />
 
         {/* Settings Forms */}
-        <div className="flex-1 w-full space-y-6 sm:space-y-8 min-w-0">
+        <div className="flex-1 w-full space-y-5 sm:space-y-8 min-w-0">
           {/* Profile Form */}
           <form
             ref={profileFormRef}
             onSubmit={handleUpdateProfile}
-            className="bg-white rounded-3xl p-5 sm:p-8 border border-cream-200 shadow-soft space-y-5 sm:space-y-6"
+            className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-cream-200 shadow-soft space-y-4 sm:space-y-6"
           >
             <div className="flex items-center justify-between pb-3 border-b border-cream-200">
               <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2">
@@ -404,7 +404,7 @@ export const ProfilePage: React.FC = () => {
           <form
             id="security-pin"
             onSubmit={handleUpdatePin}
-            className="bg-white rounded-3xl p-5 sm:p-8 border border-cream-200 shadow-soft space-y-4"
+            className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-cream-200 shadow-soft space-y-4"
           >
             <h3 className="font-serif font-bold text-base text-stone-900 flex items-center gap-2 pb-3 border-b border-cream-200">
               <KeyRound className="w-4 h-4 text-burgundy" /> Security PIN Configuration

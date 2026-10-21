@@ -17,8 +17,10 @@ export function deriveContextIds(businessId, isSeller = false) {
 export function profileToUser(row) {
   if (!row) return null;
   const sellerStatus = row.seller_status ? String(row.seller_status) : 'NONE';
-  const roles = Array.isArray(row.roles) ? row.roles : (row.role ? [row.role] : []);
-  const isSellerApproved = sellerStatus === 'APPROVED' || roles.includes('SELLER') || row.role === 'SELLER';
+  const rawRole = row.role === 'DELIVERY' ? 'DELIVERY_PERSON' : row.role;
+  const roles = (Array.isArray(row.roles) ? row.roles : (row.role ? [row.role] : []))
+    .map((r) => (r === 'DELIVERY' ? 'DELIVERY_PERSON' : r));
+  const isSellerApproved = sellerStatus === 'APPROVED' || roles.includes('SELLER') || rawRole === 'SELLER';
   const { customerId, sellerId } = deriveContextIds(row.business_id, isSellerApproved);
 
   return {
@@ -28,7 +30,7 @@ export function profileToUser(row) {
     fullName: row.full_name ?? '',
     gender: row.gender ?? '',
     avatarUrl: row.avatar_url ?? undefined,
-    role: row.role,
+    role: rawRole,
     roles,
     isSellerApproved,
     sellerStatus,

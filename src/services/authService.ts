@@ -166,6 +166,17 @@ export const authService = {
     return res.user;
   },
 
+  /**
+   * Dedicated delivery operator login (email + password). Express verifies the password,
+   * issues the HttpOnly session cookie, and returns the authorized operator user.
+   */
+  async deliveryLogin(email: string, password: string): Promise<UserProfile> {
+    const res = await apiRequest<UserResponse>('/delivery/auth/login', {
+      body: JSON.stringify({ email, password }),
+    });
+    return res.user;
+  },
+
   /** Server-side session lookup. 401/403 means "not signed in" (returns null);
    *  any other failure is thrown so the UI can show a real error state. */
   async getSession(): Promise<UserProfile | null> {

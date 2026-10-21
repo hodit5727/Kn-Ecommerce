@@ -958,14 +958,16 @@ export function createAdminManagementRouter({ env, supabase }) {
       // ignore table absence
     }
 
-    // Register in profiles
+    // Register in profiles with valid PostgreSQL user_role enum ('DELIVERY' / 'ADMIN')
+    const dbRole = role === 'DELIVERY_PERSON' ? 'DELIVERY' : (role === 'SUPER_ADMIN' ? 'ADMIN' : 'ADMIN');
+    const dbRoles = role === 'DELIVERY_PERSON' ? ['CUSTOMER', 'DELIVERY'] : ['CUSTOMER', 'ADMIN'];
     await supabase.service.from('profiles').upsert({
       id: opAuthId,
       full_name: fullName,
       email,
       phone: phone || null,
-      role: role === 'DELIVERY_PERSON' ? 'CUSTOMER' : 'ADMIN',
-      roles: role === 'DELIVERY_PERSON' ? ['CUSTOMER', 'DELIVERY_PERSON'] : ['CUSTOMER', 'ADMIN', role],
+      role: dbRole,
+      roles: dbRoles,
       status: 'ACTIVE',
       created_at: nowIso,
     }, { onConflict: 'id' });

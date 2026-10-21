@@ -196,167 +196,301 @@ export const AdminOrdersPage: React.FC = () => {
       ) : isLoading ? (
         <div className="py-20 text-center text-xs text-stone-500">Accessing order index...</div>
       ) : (
-        <div className="bg-white rounded-3xl border border-stone-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-6">Order #</th>
-                  <th className="py-4 px-4">Customer</th>
-                  <th className="py-4 px-4">Seller & Store</th>
-                  <th className="py-4 px-4">Product Details</th>
-                  <th className="py-4 px-4">Amount</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-6 text-right">Actions & Delivery</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {filtered.map((order) => {
-                  const customerPhone = order.customerPhone || order.shippingAddress?.phone || '';
-                  const sellerStore = order.sellerStoreName || order.sellerName || order.items[0]?.product?.sellerName || 'Store';
-                  const sellerEmail = order.sellerEmail || order.items[0]?.product?.sellerEmail || '';
-                  const sellerPhone = order.sellerPhone || order.items[0]?.product?.sellerPhone || '';
-                  const sellerBusinessId = order.sellerBusinessId || order.items[0]?.product?.sellerBusinessId || '';
-                  const orderCode = order.orderCode || (order.orderNumber?.match(/\d{4}$/) ? `KNOR-${order.orderNumber.match(/\d{4}/)![0]}` : order.orderNumber);
+        <div className="space-y-4">
+          {/* Mobile Stacked Cards (Visible on screens < md) */}
+          <div className="md:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center text-xs text-stone-500 bg-white rounded-2xl border border-stone-200">
+                No orders found matching your criteria.
+              </div>
+            ) : (
+              filtered.map((order) => {
+                const customerPhone = order.customerPhone || order.shippingAddress?.phone || '';
+                const sellerStore = order.sellerStoreName || order.sellerName || order.items[0]?.product?.sellerName || 'Store';
+                const sellerEmail = order.sellerEmail || order.items[0]?.product?.sellerEmail || '';
+                const sellerPhone = order.sellerPhone || order.items[0]?.product?.sellerPhone || '';
+                const sellerBusinessId = order.sellerBusinessId || order.items[0]?.product?.sellerBusinessId || '';
+                const orderCode = order.orderCode || (order.orderNumber?.match(/\d{4}$/) ? `KNOR-${order.orderNumber.match(/\d{4}/)![0]}` : order.orderNumber);
 
-                  return (
-                    <tr key={order.id} className="hover:bg-stone-50/50">
-                      {/* Order Code */}
-                      <td className="py-4 px-6 font-mono font-bold text-stone-900 whitespace-nowrap">
-                        <Link to={`/orders/${order.id}`} className="hover:text-burgundy underline">
+                return (
+                  <div
+                    key={order.id}
+                    className="bg-white rounded-2xl border border-stone-200/90 shadow-soft p-4 space-y-3"
+                  >
+                    {/* Header: Order Code & Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
+                          Order Number
+                        </span>
+                        <Link to={`/orders/${order.id}`} className="font-mono text-sm font-bold text-stone-900 hover:text-burgundy underline">
                           {orderCode}
                         </Link>
-                      </td>
+                      </div>
+                      <Badge
+                        variant={order.orderStatus === 'COD_DELIVERED' ? 'emerald' : order.orderStatus === 'COD_CANCELLED' ? 'rosered' : 'stone'}
+                        size="sm"
+                        dot
+                      >
+                        {order.orderStatus.replace('COD_', '')}
+                      </Badge>
+                    </div>
 
-                      {/* Customer Details: Name, Email, Phone, ID */}
-                      <td className="py-4 px-4 min-w-[200px]">
+                    {/* Customer & Seller Information */}
+                    <div className="bg-stone-50/70 rounded-xl p-3 text-xs space-y-2 border border-stone-200/80">
+                      <div>
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider block">Customer</span>
                         <p className="font-bold text-stone-900">{order.customerName}</p>
                         <p className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
                           <Mail className="w-3 h-3 text-stone-400 shrink-0" />
-                          <span className="truncate max-w-[170px]">{order.customerEmail}</span>
+                          <span className="truncate">{order.customerEmail}</span>
                         </p>
-                        {customerPhone ? (
+                        {customerPhone && (
                           <p className="text-[11px] text-stone-700 font-mono flex items-center gap-1 mt-0.5">
                             <Phone className="w-3 h-3 text-burgundy shrink-0" />
                             <span>{customerPhone}</span>
                           </p>
-                        ) : (
-                          <p className="text-[10px] text-stone-400 italic mt-0.5">No phone provided</p>
                         )}
-                        {order.customerBusinessId && (
-                          <span className="inline-block mt-1 font-mono text-[9px] font-bold text-burgundy bg-burgundy/5 px-1.5 py-0.5 rounded border border-burgundy/10">
-                            {order.customerBusinessId}
-                          </span>
-                        )}
-                      </td>
+                      </div>
 
-                      {/* Seller & Store */}
-                      <td className="py-4 px-4 min-w-[170px]">
+                      <div className="pt-2 border-t border-stone-200/60">
+                        <span className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider block">Seller & Store</span>
                         <p className="font-semibold text-stone-900 flex items-center gap-1">
                           <Store className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <span>{sellerStore}</span>
                         </p>
-                        {order.sellerPersonName && order.sellerPersonName !== sellerStore && (
-                          <p className="text-[11px] text-stone-600 font-medium">
-                            {order.sellerPersonName}
-                          </p>
-                        )}
-                        {sellerEmail && (
-                          <p className="text-[10px] text-stone-500 truncate max-w-[160px] flex items-center gap-1 mt-0.5">
-                            <Mail className="w-2.5 h-2.5 text-stone-400 shrink-0" />
-                            <span>{sellerEmail}</span>
-                          </p>
-                        )}
-                        {sellerPhone && (
-                          <p className="text-[10px] text-stone-600 font-mono flex items-center gap-1 mt-0.5">
-                            <Phone className="w-2.5 h-2.5 text-burgundy shrink-0" />
-                            <span>{sellerPhone}</span>
-                          </p>
-                        )}
                         {sellerBusinessId && (
                           <span className="inline-block mt-1 font-mono text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
                             {sellerBusinessId}
                           </span>
                         )}
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Product Details */}
-                      <td className="py-4 px-4 text-stone-700 max-w-[220px]">
-                        <p className="font-medium line-clamp-1 text-stone-900">
+                    {/* Product & Total Amount */}
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[10px] text-stone-400 font-medium block">Item</span>
+                        <p className="font-medium text-stone-900 truncate">
                           {order.items[0]?.product.name}
                         </p>
-                        <p className="text-[11px] text-stone-500 mt-0.5">
+                        <p className="text-[11px] text-stone-500">
                           Qty: <strong>{order.items[0]?.quantity}</strong>
-                          {order.items.length > 1 && ` (+${order.items.length - 1} more items)`}
+                          {order.items.length > 1 && ` (+${order.items.length - 1} more)`}
                         </p>
-                      </td>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-stone-400 font-medium block">COD Total</span>
+                        <p className="font-bold font-mono text-stone-900 text-sm">
+                          {formatINR(order.totalAmount)}
+                        </p>
+                      </div>
+                    </div>
 
-                      {/* Amount */}
-                      <td className="py-4 px-4 font-bold text-stone-900 whitespace-nowrap">
-                        <span className="text-sm">{formatINR(order.totalAmount)}</span>
-                        <span className="block text-[9px] uppercase tracking-wider text-stone-400 font-semibold">COD</span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <Badge
-                          variant={order.orderStatus === 'COD_DELIVERED' ? 'emerald' : order.orderStatus === 'COD_CANCELLED' ? 'rosered' : 'stone'}
-                          size="sm"
-                          dot
-                        >
-                          {order.orderStatus.replace('COD_', '')}
-                        </Badge>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Inspect Button */}
+                    {/* Actions */}
+                    <div className="pt-2 border-t border-stone-100 flex items-center justify-end gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setInspectedOrder(order)}
+                        className="px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-700 text-xs font-semibold flex items-center gap-1 hover:border-burgundy hover:text-burgundy"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-stone-500" />
+                        <span>Inspect</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBillOrder(order)}
+                        className="px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 text-xs font-semibold flex items-center gap-1 hover:bg-stone-100"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-stone-600" />
+                        <span>Slip</span>
+                      </button>
+                      {order.orderStatus !== 'COD_DELIVERED' && order.orderStatus !== 'COD_CANCELLED' && (
+                        <>
                           <button
-                            type="button"
-                            onClick={() => setInspectedOrder(order)}
-                            className="px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-700 hover:border-burgundy hover:text-burgundy text-[11px] font-semibold flex items-center gap-1 transition-colors shadow-2xs"
-                            title="Inspect complete order details"
+                            onClick={() => handleUpdateStatus(order.id, 'COD_DELIVERED')}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 transition-colors"
                           >
-                            <Eye className="w-3.5 h-3.5 text-stone-500" />
-                            <span>Inspect</span>
+                            Mark Delivered
                           </button>
-
-                          {/* Print Bill / Slip Button */}
                           <button
-                            type="button"
-                            onClick={() => setBillOrder(order)}
-                            className="px-2.5 py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-cream-100 text-[11px] font-semibold flex items-center gap-1 transition-colors shadow-2xs"
-                            title="Generate Delivery Bill & Tax Invoice"
+                            onClick={() => handleUpdateStatus(order.id, 'COD_CANCELLED')}
+                            className="px-2.5 py-1.5 rounded-lg bg-rosered text-white text-xs font-semibold hover:bg-rosered-600 transition-colors"
                           >
-                            <Printer className="w-3.5 h-3.5 text-stone-600" />
-                            <span>Slip</span>
+                            Void
                           </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
 
-                          {/* Mark Delivered & Void Buttons */}
-                          {order.orderStatus !== 'COD_DELIVERED' && order.orderStatus !== 'COD_CANCELLED' && (
-                            <>
-                              <button
-                                onClick={() => handleUpdateStatus(order.id, 'COD_DELIVERED')}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-[11px] font-semibold hover:bg-emerald-800 transition-colors shadow-xs"
-                              >
-                                Mark Delivered
-                              </button>
-                              <button
-                                onClick={() => handleUpdateStatus(order.id, 'COD_CANCELLED')}
-                                className="px-2.5 py-1 rounded-lg bg-rosered text-white text-[11px] font-semibold hover:bg-rosered-600 transition-colors shadow-xs"
-                              >
-                                Void
-                              </button>
-                            </>
+          {/* Desktop Luxury Table (Visible on md and up) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-stone-200/90 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50/80 border-b border-stone-200/80 text-[10px] font-bold text-stone-500 uppercase tracking-widest">
+                    <th className="py-4 px-6">Order #</th>
+                    <th className="py-4 px-4">Customer</th>
+                    <th className="py-4 px-4">Seller & Store</th>
+                    <th className="py-4 px-4">Product Details</th>
+                    <th className="py-4 px-4">Amount</th>
+                    <th className="py-4 px-4">Status</th>
+                    <th className="py-4 px-6 text-right">Actions & Delivery</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filtered.map((order) => {
+                    const customerPhone = order.customerPhone || order.shippingAddress?.phone || '';
+                    const sellerStore = order.sellerStoreName || order.sellerName || order.items[0]?.product?.sellerName || 'Store';
+                    const sellerEmail = order.sellerEmail || order.items[0]?.product?.sellerEmail || '';
+                    const sellerPhone = order.sellerPhone || order.items[0]?.product?.sellerPhone || '';
+                    const sellerBusinessId = order.sellerBusinessId || order.items[0]?.product?.sellerBusinessId || '';
+                    const orderCode = order.orderCode || (order.orderNumber?.match(/\d{4}$/) ? `KNOR-${order.orderNumber.match(/\d{4}/)![0]}` : order.orderNumber);
+
+                    return (
+                      <tr key={order.id} className="hover:bg-stone-50/60 transition-colors">
+                        {/* Order Code */}
+                        <td className="py-4 px-6 font-mono font-bold text-stone-900 whitespace-nowrap">
+                          <Link to={`/orders/${order.id}`} className="hover:text-burgundy underline">
+                            {orderCode}
+                          </Link>
+                        </td>
+
+                        {/* Customer Details: Name, Email, Phone, ID */}
+                        <td className="py-4 px-4 min-w-[200px]">
+                          <p className="font-bold text-stone-900">{order.customerName}</p>
+                          <p className="text-[11px] text-stone-500 flex items-center gap-1 mt-0.5">
+                            <Mail className="w-3 h-3 text-stone-400 shrink-0" />
+                            <span className="truncate max-w-[170px]">{order.customerEmail}</span>
+                          </p>
+                          {customerPhone ? (
+                            <p className="text-[11px] text-stone-700 font-mono flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-burgundy shrink-0" />
+                              <span>{customerPhone}</span>
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-stone-400 italic mt-0.5">No phone provided</p>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          {order.customerBusinessId && (
+                            <span className="inline-block mt-1 font-mono text-[9px] font-bold text-burgundy bg-burgundy/5 px-1.5 py-0.5 rounded border border-burgundy/10">
+                              {order.customerBusinessId}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Seller & Store */}
+                        <td className="py-4 px-4 min-w-[170px]">
+                          <p className="font-semibold text-stone-900 flex items-center gap-1">
+                            <Store className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>{sellerStore}</span>
+                          </p>
+                          {order.sellerPersonName && order.sellerPersonName !== sellerStore && (
+                            <p className="text-[11px] text-stone-600 font-medium">
+                              {order.sellerPersonName}
+                            </p>
+                          )}
+                          {sellerEmail && (
+                            <p className="text-[10px] text-stone-500 truncate max-w-[160px] flex items-center gap-1 mt-0.5">
+                              <Mail className="w-2.5 h-2.5 text-stone-400 shrink-0" />
+                              <span>{sellerEmail}</span>
+                            </p>
+                          )}
+                          {sellerPhone && (
+                            <p className="text-[10px] text-stone-600 font-mono flex items-center gap-1 mt-0.5">
+                              <Phone className="w-2.5 h-2.5 text-burgundy shrink-0" />
+                              <span>{sellerPhone}</span>
+                            </p>
+                          )}
+                          {sellerBusinessId && (
+                            <span className="inline-block mt-1 font-mono text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              {sellerBusinessId}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Product Details */}
+                        <td className="py-4 px-4 text-stone-700 max-w-[220px]">
+                          <p className="font-medium line-clamp-1 text-stone-900">
+                            {order.items[0]?.product.name}
+                          </p>
+                          <p className="text-[11px] text-stone-500 mt-0.5">
+                            Qty: <strong>{order.items[0]?.quantity}</strong>
+                            {order.items.length > 1 && ` (+${order.items.length - 1} more items)`}
+                          </p>
+                        </td>
+
+                        {/* Amount */}
+                        <td className="py-4 px-4 font-bold text-stone-900 whitespace-nowrap">
+                          <span className="text-sm font-mono">{formatINR(order.totalAmount)}</span>
+                          <span className="block text-[9px] uppercase tracking-wider text-stone-400 font-semibold">COD</span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <Badge
+                            variant={order.orderStatus === 'COD_DELIVERED' ? 'emerald' : order.orderStatus === 'COD_CANCELLED' ? 'rosered' : 'stone'}
+                            size="sm"
+                            dot
+                          >
+                            {order.orderStatus.replace('COD_', '')}
+                          </Badge>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* Inspect Button */}
+                            <button
+                              type="button"
+                              onClick={() => setInspectedOrder(order)}
+                              className="px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-700 hover:border-burgundy hover:text-burgundy text-[11px] font-semibold flex items-center gap-1 transition-colors shadow-2xs"
+                              title="Inspect complete order details"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-stone-500" />
+                              <span>Inspect</span>
+                            </button>
+
+                            {/* Print Bill / Slip Button */}
+                            <button
+                              type="button"
+                              onClick={() => setBillOrder(order)}
+                              className="px-2.5 py-1 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-semibold flex items-center gap-1 transition-colors shadow-2xs"
+                              title="Generate Delivery Bill & Tax Invoice"
+                            >
+                              <Printer className="w-3.5 h-3.5 text-stone-600" />
+                              <span>Slip</span>
+                            </button>
+
+                            {/* Mark Delivered & Void Buttons */}
+                            {order.orderStatus !== 'COD_DELIVERED' && order.orderStatus !== 'COD_CANCELLED' && (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateStatus(order.id, 'COD_DELIVERED')}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-[11px] font-semibold hover:bg-emerald-800 transition-colors shadow-xs"
+                                >
+                                  Mark Delivered
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateStatus(order.id, 'COD_CANCELLED')}
+                                  className="px-2.5 py-1 rounded-lg bg-rosered text-white text-[11px] font-semibold hover:bg-rosered-600 transition-colors shadow-xs"
+                                >
+                                  Void
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -251,55 +251,133 @@ export const AdminTransactionsPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── Table ──────────────────────────────────────────────────────────── */}
+      {/* ── Table & Mobile Cards ────────────────────────────────────────── */}
       {error ? (
         <ErrorState message={error} onRetry={loadData} />
       ) : isLoading ? (
         <div className="py-20 text-center text-xs text-stone-500">Accessing fiscal ledger...</div>
+      ) : filteredTransactions.length === 0 ? (
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-12 border border-cream-200 shadow-soft text-center text-xs text-stone-500">
+          No transactions found matching your criteria.
+        </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-stone-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs font-mono">
-              <thead>
-                <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px] font-sans">
-                  <th className="py-4 px-6 whitespace-nowrap">Tx Number</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Timestamp</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Atelier / Entity</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Requisition</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Category</th>
-                  <th className="py-4 px-4 text-emerald-700 whitespace-nowrap">Credit (CR)</th>
-                  <th className="py-4 px-4 text-rosered-600 whitespace-nowrap">Debit (DR)</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Payout Ref</th>
-                  <th className="py-4 px-4 whitespace-nowrap">Treasury Balance</th>
-                  <th className="py-4 px-6 text-right whitespace-nowrap">Reconciliation</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {filteredTransactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-12 text-center text-xs text-stone-500 font-sans">
-                      No transactions found matching your criteria.
-                    </td>
+        <>
+          {/* Mobile Card Layout (< md) */}
+          <div className="md:hidden space-y-3">
+            {filteredTransactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="bg-white rounded-2xl p-4 border border-cream-200 shadow-soft space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-cream-100">
+                  <div>
+                    <span className="font-mono text-xs font-bold text-stone-900 block">
+                      {tx.transactionNumber}
+                    </span>
+                    <span className="text-[10px] text-stone-400">
+                      {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      tx.type === 'CR'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200'
+                    }`}
+                  >
+                    {tx.type === 'CR' ? 'CREDIT (CR)' : 'DEBIT (DR)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold">Entity / Store</span>
+                    <span className="font-semibold text-stone-800 truncate block">
+                      {tx.sellerName || 'Central Platform Escrow'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-stone-400 block uppercase font-bold">Order ID</span>
+                    <span className="font-mono text-stone-700 block">
+                      {tx.orderNumber || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {tx.payoutReference && (
+                  <div className="p-2 rounded-xl bg-amber-50/60 border border-amber-200/60 text-[11px] flex items-center justify-between">
+                    <span className="text-amber-800 font-medium">Wire Reference:</span>
+                    <span className="font-mono font-bold text-amber-900">{tx.payoutReference}</span>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-cream-100 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] text-stone-400 block">Amount</span>
+                    <span
+                      className={`text-sm font-bold font-mono ${
+                        tx.type === 'CR' ? 'text-emerald-700' : 'text-rose-600'
+                      }`}
+                    >
+                      {tx.type === 'CR' ? `+${formatINR(tx.amount)}` : `-${formatINR(tx.amount)}`}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-stone-400 block">Treasury Balance</span>
+                    <span className="text-xs font-bold text-stone-900 font-mono">
+                      {formatINR(tx.balanceAfter)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Luxury Table (>= md) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-cream-200 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-cream-100/60 border-b border-cream-200 text-stone-600 uppercase tracking-wider font-bold text-[10px] sm:text-[11px]">
+                    <th className="py-3.5 px-6 whitespace-nowrap">Tx Number</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Timestamp</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Atelier / Entity</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Requisition</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Category</th>
+                    <th className="py-3.5 px-4 text-emerald-700 whitespace-nowrap">Credit (CR)</th>
+                    <th className="py-3.5 px-4 text-rosered-600 whitespace-nowrap">Debit (DR)</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Payout Ref</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">Treasury Balance</th>
+                    <th className="py-3.5 px-6 text-right whitespace-nowrap">Reconciliation</th>
                   </tr>
-                ) : (
-                  filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-stone-50/50">
-                      <td className="py-4 px-6 font-bold text-stone-900 whitespace-nowrap">{tx.transactionNumber}</td>
-                      <td className="py-4 px-4 text-stone-500 font-sans text-[11px] whitespace-nowrap">
-                        {new Date(tx.createdAt).toLocaleDateString()}
+                </thead>
+                <tbody className="divide-y divide-cream-100 font-mono">
+                  {filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-cream-50/50 transition-colors">
+                      <td className="py-3.5 px-6 font-bold text-stone-900 whitespace-nowrap">{tx.transactionNumber}</td>
+                      <td className="py-3.5 px-4 text-stone-500 font-sans text-[11px] whitespace-nowrap">
+                        {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </td>
-                      <td className="py-4 px-4 font-sans font-medium text-stone-800 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-sans font-medium text-stone-800 whitespace-nowrap">
                         {tx.sellerName || 'Central Platform Escrow'}
                       </td>
-                      <td className="py-4 px-4 text-stone-600 whitespace-nowrap">{tx.orderNumber || '—'}</td>
-                      <td className="py-4 px-4 font-sans text-[11px] text-stone-600 whitespace-nowrap">{tx.category}</td>
-                      <td className="py-4 px-4 font-bold text-emerald-700 whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-stone-600 whitespace-nowrap">{tx.orderNumber || '—'}</td>
+                      <td className="py-3.5 px-4 font-sans text-[11px] text-stone-600 whitespace-nowrap">{tx.category}</td>
+                      <td className="py-3.5 px-4 font-bold text-emerald-700 whitespace-nowrap">
                         {tx.type === 'CR' ? `+${formatINR(tx.amount)}` : '—'}
                       </td>
-                      <td className="py-4 px-4 font-bold text-rosered-600 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-bold text-rosered-600 whitespace-nowrap">
                         {tx.type === 'DR' ? `-${formatINR(tx.amount)}` : '—'}
                       </td>
-                      <td className="py-4 px-4 text-stone-600 text-[11px] whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-stone-600 text-[11px] whitespace-nowrap font-sans">
                         {tx.payoutReference ? (
                           <span className="font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                             {tx.payoutReference}
@@ -308,19 +386,19 @@ export const AdminTransactionsPage: React.FC = () => {
                           '—'
                         )}
                       </td>
-                      <td className="py-4 px-4 font-bold text-stone-900 whitespace-nowrap">{formatINR(tx.balanceAfter)}</td>
-                      <td className="py-4 px-6 text-right font-sans whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-bold text-stone-900 whitespace-nowrap">{formatINR(tx.balanceAfter)}</td>
+                      <td className="py-3.5 px-6 text-right font-sans whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3" /> Reconciled
                         </span>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

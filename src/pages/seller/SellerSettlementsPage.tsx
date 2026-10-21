@@ -121,59 +121,119 @@ export const SellerSettlementsPage: React.FC = () => {
       ) : isLoading ? (
         <div className="py-20 text-center text-xs text-stone-500">Retrieving settlement records...</div>
       ) : (
-        <div className="bg-white rounded-3xl border border-cream-200 shadow-soft overflow-hidden">
-          <div className="p-6 border-b border-cream-200">
-            <h3 className="font-serif font-bold text-base text-stone-900">
-              Settlement Batch History
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-6">Settlement ID</th>
-                  <th className="py-4 px-4">Period</th>
-                  <th className="py-4 px-4">Gross Collected</th>
-                  <th className="py-4 px-4">Platform Fee (5%)</th>
-                  <th className="py-4 px-4 font-bold text-burgundy">Net Wire Amount</th>
-                  <th className="py-4 px-4">Banking Reference</th>
-                  <th className="py-4 px-6 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cream-100">
-                {settlements.map((stl) => (
-                  <tr key={stl.id} className="hover:bg-cream-50/50">
-                    <td className="py-4 px-6 font-mono font-semibold text-stone-900">
-                      {stl.settlementNumber}
-                    </td>
-                    <td className="py-4 px-4 text-stone-600">
-                      {stl.periodStart} to {stl.periodEnd}
-                    </td>
-                    <td className="py-4 px-4 font-semibold text-stone-900">
-                      {formatINR(stl.grossAmount)}
-                    </td>
-                    <td className="py-4 px-4 text-stone-500">
-                      {formatINR(stl.platformFee)}
-                    </td>
-                    <td className="py-4 px-4 font-bold text-burgundy text-sm">
-                      {formatINR(stl.netSettlementAmount)}
-                    </td>
-                    <td className="py-4 px-4 font-mono text-stone-500 text-[11px]">
+        <div className="space-y-4">
+          {/* Mobile Stacked Cards (Visible on screens < md) */}
+          <div className="md:hidden space-y-3">
+            {settlements.length === 0 ? (
+              <div className="py-12 text-center text-xs text-stone-500 bg-white rounded-2xl border border-cream-200">
+                No settlement batches found.
+              </div>
+            ) : (
+              settlements.map((stl) => (
+                <div
+                  key={stl.id}
+                  className="bg-white rounded-2xl border border-cream-200/90 shadow-soft p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
+                        Settlement ID
+                      </span>
+                      <p className="font-mono text-sm font-bold text-stone-900">{stl.settlementNumber}</p>
+                      <p className="text-[11px] text-stone-500 mt-0.5">
+                        {stl.periodStart} to {stl.periodEnd}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={stl.status === 'COMPLETED' ? 'emerald' : 'amber'}
+                      size="sm"
+                      dot
+                    >
+                      {stl.status}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-cream-50/70 rounded-xl p-2.5 border border-cream-200/80 text-center text-xs font-mono">
+                    <div>
+                      <span className="text-[10px] font-sans text-stone-400 block">Gross</span>
+                      <span className="font-semibold text-stone-800">{formatINR(stl.grossAmount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-sans text-amber-700 block">Fee (5%)</span>
+                      <span className="font-semibold text-amber-800">-{formatINR(stl.platformFee)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-sans text-burgundy block font-bold">Net Wire</span>
+                      <span className="font-bold text-burgundy">{formatINR(stl.netSettlementAmount)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1 border-t border-cream-100">
+                    <span>Banking Ref:</span>
+                    <span className="font-mono font-medium text-stone-800">
                       {stl.bankReference || 'Pending Batching'}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <Badge
-                        variant={stl.status === 'COMPLETED' ? 'emerald' : 'amber'}
-                        size="sm"
-                        dot
-                      >
-                        {stl.status}
-                      </Badge>
-                    </td>
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Luxury Table (Visible on screens >= md) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-cream-200/90 shadow-soft overflow-hidden">
+            <div className="p-6 border-b border-cream-200">
+              <h3 className="font-serif font-bold text-base text-stone-900">
+                Settlement Batch History
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50/80 border-b border-cream-200/80 text-stone-500 uppercase tracking-widest font-bold text-[10px]">
+                    <th className="py-4 px-6">Settlement ID</th>
+                    <th className="py-4 px-4">Period</th>
+                    <th className="py-4 px-4">Gross Collected</th>
+                    <th className="py-4 px-4">Platform Fee (5%)</th>
+                    <th className="py-4 px-4 font-bold text-burgundy">Net Wire Amount</th>
+                    <th className="py-4 px-4">Banking Reference</th>
+                    <th className="py-4 px-6 text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-cream-100">
+                  {settlements.map((stl) => (
+                    <tr key={stl.id} className="hover:bg-cream-50/50 transition-colors">
+                      <td className="py-4 px-6 font-mono font-semibold text-stone-900">
+                        {stl.settlementNumber}
+                      </td>
+                      <td className="py-4 px-4 text-stone-600">
+                        {stl.periodStart} to {stl.periodEnd}
+                      </td>
+                      <td className="py-4 px-4 font-semibold text-stone-900 font-mono">
+                        {formatINR(stl.grossAmount)}
+                      </td>
+                      <td className="py-4 px-4 text-stone-500 font-mono">
+                        {formatINR(stl.platformFee)}
+                      </td>
+                      <td className="py-4 px-4 font-bold text-burgundy text-sm font-mono">
+                        {formatINR(stl.netSettlementAmount)}
+                      </td>
+                      <td className="py-4 px-4 font-mono text-stone-500 text-[11px]">
+                        {stl.bankReference || 'Pending Batching'}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <Badge
+                          variant={stl.status === 'COMPLETED' ? 'emerald' : 'amber'}
+                          size="sm"
+                          dot
+                        >
+                          {stl.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

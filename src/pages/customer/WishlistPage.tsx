@@ -53,7 +53,7 @@ export const WishlistPage: React.FC = () => {
   }, [wishlistIds]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
       <div className="border-b border-cream-200 pb-6 flex items-center justify-between">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-burgundy block mb-1">

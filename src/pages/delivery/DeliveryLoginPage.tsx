@@ -13,7 +13,7 @@ export const DeliveryLoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { refreshSession } = useAuth();
+  const { deliveryLogin } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -28,8 +28,7 @@ export const DeliveryLoginPage: React.FC = () => {
     setError(null);
 
     try {
-      await deliveryService.login(email.trim().toLowerCase(), password);
-      await refreshSession();
+      await deliveryLogin(email.trim().toLowerCase(), password);
       showToast('Delivery operator authenticated successfully!');
       navigate('/delivery');
     } catch (err: any) {

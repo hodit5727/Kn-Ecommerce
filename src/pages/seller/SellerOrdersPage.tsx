@@ -101,114 +101,200 @@ export const SellerOrdersPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-cream-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-ivory border-b border-cream-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-5">Order ID</th>
-                  <th className="py-4 px-4">Date</th>
-                  <th className="py-4 px-4">Customer Ref</th>
-                  <th className="py-4 px-4">Product ID & Name</th>
-                  <th className="py-4 px-4">Price & Qty</th>
-                  <th className="py-4 px-4">Delivery Logistics</th>
-                  <th className="py-4 px-5 text-right">Delivery Progress</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-cream-100">
-                {orders.map((order) => {
-                  const progress = getAdminProgressDisplay(order.orderStatus);
-                  const orderCode = order.orderCode || order.orderNumber;
-                  const firstItem = order.items[0];
-                  const itemMatch = String(firstItem?.product?.sku || '').match(/\d{4}$/);
-                  const itemHex = String(firstItem?.product?.id || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
-                  const itemDigits = itemMatch ? itemMatch[0] : (itemHex ? String((parseInt(itemHex, 16) % 9000) + 1000) : '1001');
-                  const productCode = (firstItem?.product as any)?.productCode || `KNPR-${itemDigits}`;
+        <div className="space-y-4">
+          {/* Mobile Stacked Cards (Visible on screens < md) */}
+          <div className="md:hidden space-y-3">
+            {orders.map((order) => {
+              const progress = getAdminProgressDisplay(order.orderStatus);
+              const orderCode = order.orderCode || order.orderNumber;
+              const firstItem = order.items[0];
+              const itemMatch = String(firstItem?.product?.sku || '').match(/\d{4}$/);
+              const itemHex = String(firstItem?.product?.id || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
+              const itemDigits = itemMatch ? itemMatch[0] : (itemHex ? String((parseInt(itemHex, 16) % 9000) + 1000) : '1001');
+              const productCode = (firstItem?.product as any)?.productCode || `KNPR-${itemDigits}`;
 
-                  return (
-                    <tr key={order.id} className="hover:bg-cream-50/50">
-                      {/* Order ID */}
-                      <td className="py-4 px-5">
-                        <span className="font-mono font-bold text-stone-900 block text-xs">
-                          {orderCode}
+              return (
+                <div
+                  key={order.id}
+                  className="bg-white rounded-2xl border border-cream-200/90 shadow-soft p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
+                        Order ID
+                      </span>
+                      <p className="font-mono text-sm font-bold text-stone-900">{orderCode}</p>
+                      <span className="text-[10px] text-stone-400 font-mono">
+                        {new Date(order.createdAt).toLocaleDateString()} • COD
+                      </span>
+                    </div>
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      order.orderStatus === 'COD_DELIVERED'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : order.orderStatus === 'COD_SHIPPED'
+                        ? 'bg-burgundy/10 text-burgundy border border-burgundy/20'
+                        : order.orderStatus === 'COD_CANCELLED'
+                        ? 'bg-stone-100 text-stone-500 border border-stone-200'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                    }`}>
+                      {progress.label}
+                    </span>
+                  </div>
+
+                  <div className="bg-cream-50/70 rounded-xl p-3 text-xs space-y-2 border border-cream-200/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-stone-500">Customer Ref</span>
+                      <span className="font-mono font-bold text-stone-800 bg-white px-2 py-0.5 rounded border border-stone-200 text-[11px]">
+                        {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-stone-500 block text-[10px]">Product</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy font-mono text-[10px] font-bold shrink-0">
+                          {productCode}
                         </span>
-                        <span className="text-[10px] text-stone-400 font-mono">
-                          COD Payment
+                        <span className="font-medium text-stone-900 truncate">
+                          {firstItem?.product?.name || 'Product'}
                         </span>
-                      </td>
-
-                      {/* Date */}
-                      <td className="py-4 px-4 text-stone-500 text-[11px] whitespace-nowrap">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </td>
-
-                      {/* Customer Ref (Privacy-protected: no raw name/phone) */}
-                      <td className="py-4 px-4">
-                        <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-800 font-mono text-[11px] font-bold">
-                          {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
+                      </div>
+                      {order.items.length > 1 && (
+                        <span className="text-[10px] text-stone-400 block mt-0.5">
+                          +{order.items.length - 1} more item(s)
                         </span>
-                        <p className="text-[10px] text-stone-400 mt-1">Campus Patron</p>
-                      </td>
+                      )}
+                    </div>
+                  </div>
 
-                      {/* Product ID & Name */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy font-mono text-[10px] font-bold shrink-0">
-                            {productCode}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-[10px] text-stone-400 block">Total Amount</span>
+                      <p className="font-mono font-bold text-stone-900 text-sm">
+                        {formatINR(order.totalAmount)}
+                      </p>
+                      <span className="text-[10px] text-stone-500">Qty: {firstItem?.quantity || 1}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-stone-400 block">Fulfillment</span>
+                      <span className="text-xs font-semibold text-stone-700">Central Hub</span>
+                      <p className="text-[10px] text-stone-400">Admin Managed</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Luxury Table (Visible on screens >= md) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-cream-200/90 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50/80 border-b border-cream-200/80 text-stone-500 uppercase tracking-widest font-bold text-[10px]">
+                    <th className="py-4 px-5">Order ID</th>
+                    <th className="py-4 px-4">Date</th>
+                    <th className="py-4 px-4">Customer Ref</th>
+                    <th className="py-4 px-4">Product ID & Name</th>
+                    <th className="py-4 px-4">Price & Qty</th>
+                    <th className="py-4 px-4">Delivery Logistics</th>
+                    <th className="py-4 px-5 text-right">Delivery Progress</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-cream-100">
+                  {orders.map((order) => {
+                    const progress = getAdminProgressDisplay(order.orderStatus);
+                    const orderCode = order.orderCode || order.orderNumber;
+                    const firstItem = order.items[0];
+                    const itemMatch = String(firstItem?.product?.sku || '').match(/\d{4}$/);
+                    const itemHex = String(firstItem?.product?.id || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
+                    const itemDigits = itemMatch ? itemMatch[0] : (itemHex ? String((parseInt(itemHex, 16) % 9000) + 1000) : '1001');
+                    const productCode = (firstItem?.product as any)?.productCode || `KNPR-${itemDigits}`;
+
+                    return (
+                      <tr key={order.id} className="hover:bg-cream-50/50 transition-colors">
+                        {/* Order ID */}
+                        <td className="py-4 px-5">
+                          <span className="font-mono font-bold text-stone-900 block text-xs">
+                            {orderCode}
                           </span>
-                          <span className="font-medium text-stone-900 line-clamp-1 text-xs">
-                            {firstItem?.product?.name || 'Product'}
+                          <span className="text-[10px] text-stone-400 font-mono">
+                            COD Payment
                           </span>
-                        </div>
-                        {order.items.length > 1 && (
-                          <span className="text-[10px] text-stone-400 block mt-0.5">
-                            +{order.items.length - 1} more item(s)
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-4 px-4 text-stone-500 text-[11px] whitespace-nowrap">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </td>
+
+                        {/* Customer Ref (Privacy-protected: no raw name/phone) */}
+                        <td className="py-4 px-4">
+                          <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-800 font-mono text-[11px] font-bold">
+                            {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
                           </span>
-                        )}
-                      </td>
+                          <p className="text-[10px] text-stone-400 mt-1">Campus Patron</p>
+                        </td>
 
-                      {/* Price & Qty */}
-                      <td className="py-4 px-4">
-                        <p className="font-bold text-stone-900 text-xs">
-                          {formatINR(order.totalAmount)}
-                        </p>
-                        <p className="text-[10px] text-stone-500">
-                          Qty: {firstItem?.quantity || 1}
-                        </p>
-                      </td>
+                        {/* Product ID & Name */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy font-mono text-[10px] font-bold shrink-0">
+                              {productCode}
+                            </span>
+                            <span className="font-medium text-stone-900 line-clamp-1 text-xs">
+                              {firstItem?.product?.name || 'Product'}
+                            </span>
+                          </div>
+                          {order.items.length > 1 && (
+                            <span className="text-[10px] text-stone-400 block mt-0.5">
+                              +{order.items.length - 1} more item(s)
+                            </span>
+                          )}
+                        </td>
 
-                      {/* Delivery Logistics (Managed by Admin) */}
-                      <td className="py-4 px-4 text-stone-600 text-xs max-w-xs">
-                        <p className="font-medium text-stone-900 truncate">
-                          Campus Fulfillment Hub
-                        </p>
-                        <p className="text-[10px] text-stone-400 truncate">
-                          Managed by Admin Delivery
-                        </p>
-                      </td>
+                        {/* Price & Qty */}
+                        <td className="py-4 px-4">
+                          <p className="font-bold font-mono text-stone-900 text-xs">
+                            {formatINR(order.totalAmount)}
+                          </p>
+                          <p className="text-[10px] text-stone-500">
+                            Qty: {firstItem?.quantity || 1}
+                          </p>
+                        </td>
 
-                      {/* Admin Delivery Progress */}
-                      <td className="py-4 px-5 text-right whitespace-nowrap">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          order.orderStatus === 'COD_DELIVERED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : order.orderStatus === 'COD_SHIPPED'
-                            ? 'bg-burgundy/10 text-burgundy border border-burgundy/20'
-                            : order.orderStatus === 'COD_CANCELLED'
-                            ? 'bg-stone-100 text-stone-500 border border-stone-200'
-                            : 'bg-amber-50 text-amber-800 border border-amber-200'
-                        }`}>
-                          {progress.label}
-                        </span>
-                        <span className="block text-[10px] text-stone-400 mt-1">
-                          {progress.desc}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {/* Delivery Logistics (Managed by Admin) */}
+                        <td className="py-4 px-4 text-stone-600 text-xs max-w-xs">
+                          <p className="font-medium text-stone-900 truncate">
+                            Campus Fulfillment Hub
+                          </p>
+                          <p className="text-[10px] text-stone-400 truncate">
+                            Managed by Admin Delivery
+                          </p>
+                        </td>
+
+                        {/* Admin Delivery Progress */}
+                        <td className="py-4 px-5 text-right whitespace-nowrap">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            order.orderStatus === 'COD_DELIVERED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : order.orderStatus === 'COD_SHIPPED'
+                              ? 'bg-burgundy/10 text-burgundy border border-burgundy/20'
+                              : order.orderStatus === 'COD_CANCELLED'
+                              ? 'bg-stone-100 text-stone-500 border border-stone-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            {progress.label}
+                          </span>
+                          <span className="block text-[10px] text-stone-400 mt-1">
+                            {progress.desc}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

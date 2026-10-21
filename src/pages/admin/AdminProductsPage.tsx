@@ -246,183 +246,318 @@ export const AdminProductsPage: React.FC = () => {
             : 'No products have been indexed yet.'}
         </div>
       ) : (
-        <div className="bg-white rounded-3xl border border-stone-200 shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-4 px-6">Artifact & Image</th>
-                  <th className="py-4 px-4">Accredited Seller</th>
-                  <th className="py-4 px-4">Category</th>
-                  <th className="py-4 px-4">Price (COD)</th>
-                  <th className="py-4 px-4">Physical Stock</th>
-                  <th className="py-4 px-4">Sold Units</th>
-                  <th className="py-4 px-4">Balance</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-6 text-right">Intervention</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {products.map((p) => {
-                  const isApproved = (p.approvalStatus || p.status) === 'APPROVED';
-                  const isRejected = (p.approvalStatus || p.status) === 'REJECTED';
-                  const isPending = !isApproved && !isRejected;
-                  const totalUnits = p.totalStock ?? p.stock;
-                  const soldUnits = p.soldCount ?? 0;
-                  const balanceUnits = p.balanceStock ?? (totalUnits - soldUnits);
+        <div className="space-y-4">
+          {/* Mobile Stacked Cards (Visible on screens < md) */}
+          <div className="md:hidden space-y-3">
+            {products.map((p) => {
+              const isApproved = (p.approvalStatus || p.status) === 'APPROVED';
+              const isRejected = (p.approvalStatus || p.status) === 'REJECTED';
+              const isPending = !isApproved && !isRejected;
+              const totalUnits = p.totalStock ?? p.stock;
+              const soldUnits = p.soldCount ?? 0;
+              const balanceUnits = p.balanceStock ?? (totalUnits - soldUnits);
 
-                  return (
-                    <tr key={p.id} className="hover:bg-stone-50/50 transition-colors">
-                      {/* Product Image & Details */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          {p.images && p.images[0] ? (
-                            <img
-                              src={p.images[0]}
-                              alt=""
-                              className="w-12 h-12 rounded-xl object-cover border border-stone-200 shrink-0"
-                            />
-                          ) : (
-                            <div
-                              className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 shrink-0"
-                              title="No product image"
-                            >
-                              <Box className="w-5 h-5" />
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <span className="font-serif font-bold text-stone-900 block truncate max-w-xs">
-                              {p.name}
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                              <span className="font-mono text-[10px] font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                                {p.productCode || (p.sku?.match(/\d{4}/) ? `KNPR-${p.sku.match(/\d{4}/)![0]}` : 'KNPR-0001')}
-                              </span>
-                              <span className="text-[10px] text-stone-400 font-mono">
-                                {p.sku}
-                              </span>
-                            </div>
-                            {/* Variant Split Tags if multi-unit split */}
-                            {p.variants && p.variants.length > 1 && (
-                              <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                {p.variants.map((v) => (
-                                  <span
-                                    key={v.id || v.sku}
-                                    className="text-[9px] font-mono text-stone-600 bg-stone-100 px-1 rounded border border-stone-200"
-                                  >
-                                    {v.color || v.size || 'Var'}: {v.stock}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Seller */}
-                      <td className="py-4 px-4">
-                        <p className="font-semibold text-stone-800">{p.sellerName || 'Accredited Merchant'}</p>
-                        <span className="text-[10px] font-mono text-stone-400 block">
-                          ID: {p.sellerId?.slice(0, 8)}...
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white rounded-2xl border border-stone-200/90 shadow-soft p-4 space-y-3"
+                >
+                  <div className="flex items-start gap-3">
+                    {p.images && p.images[0] ? (
+                      <img
+                        src={p.images[0]}
+                        alt=""
+                        className="w-14 h-14 rounded-xl object-cover border border-stone-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 shrink-0">
+                        <Box className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="font-serif font-bold text-stone-900 block truncate text-sm">
+                        {p.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <span className="font-mono text-[10px] font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          {p.productCode || (p.sku?.match(/\d{4}/) ? `KNPR-${p.sku.match(/\d{4}/)![0]}` : 'KNPR-0001')}
                         </span>
-                      </td>
+                        <span className="text-[10px] text-stone-500 font-medium">
+                          {p.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Category */}
-                      <td className="py-4 px-4 text-stone-600 font-medium">{p.category}</td>
+                  {/* Stock & Price Grid */}
+                  <div className="grid grid-cols-3 gap-2 bg-stone-50/70 rounded-xl p-2.5 border border-stone-200/80 text-center text-xs font-mono">
+                    <div>
+                      <span className="text-[10px] font-sans text-stone-400 block">Price</span>
+                      <span className="font-bold text-stone-900">{formatINR(p.price)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-sans text-stone-400 block">Sold</span>
+                      <span className="font-semibold text-emerald-700">{soldUnits} units</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-sans text-stone-400 block">Stock Left</span>
+                      <span className={`font-bold ${balanceUnits <= 2 ? 'text-rosered-600' : 'text-stone-800'}`}>
+                        {balanceUnits}
+                      </span>
+                    </div>
+                  </div>
 
-                      {/* Price */}
-                      <td className="py-4 px-4 font-bold text-stone-900 font-mono">
-                        {formatINR(p.price)}
-                      </td>
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-stone-500 truncate max-w-[180px]">
+                      By {p.sellerName || 'Merchant'}
+                    </span>
+                    <div>
+                      {isApproved ? (
+                        <Badge variant="emerald" size="sm" dot>Approved</Badge>
+                      ) : isRejected ? (
+                        <Badge variant="rosered" size="sm">Rejected</Badge>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" /> Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                      {/* Total Stock */}
-                      <td className="py-4 px-4 font-mono font-bold text-stone-800">
-                        {totalUnits} units
-                      </td>
-
-                      {/* Sold Units */}
-                      <td className="py-4 px-4 font-mono font-bold text-emerald-700">
-                        {soldUnits} sold
-                      </td>
-
-                      {/* Balance Stock */}
-                      <td className="py-4 px-4 font-mono">
-                        <span
-                          className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full inline-block ${
-                            balanceUnits <= 2
-                              ? 'bg-rosered-50 text-rosered-700 border border-rosered-200'
-                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          }`}
+                  {/* Actions */}
+                  <div className="pt-2 border-t border-stone-100 flex items-center justify-end gap-1.5 flex-wrap">
+                    {isPending && (
+                      <>
+                        <button
+                          onClick={() => handleApprove(p)}
+                          disabled={actionInProgress === p.id}
+                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
                         >
-                          {balanceUnits} available
-                        </span>
-                      </td>
-
-                      {/* Verification Status */}
-                      <td className="py-4 px-4">
-                        {isApproved ? (
-                          <Badge variant="emerald" size="sm" dot>
-                            Approved
-                          </Badge>
-                        ) : isRejected ? (
-                          <Badge variant="rosered" size="sm">
-                            Rejected
-                          </Badge>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                            <Clock className="w-3 h-3 text-amber-600" />
-                            Pending IT Cabin
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Admin Actions */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {isPending && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(p)}
-                                disabled={actionInProgress === p.id}
-                                className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1 shadow-xs"
-                                title="Approve artifact after physical inspection"
-                              >
-                                <CheckCircle className="w-3 h-3" /> Approve
-                              </button>
-                              <button
-                                onClick={() => setRejectingProduct(p)}
-                                disabled={actionInProgress === p.id}
-                                className="px-2 py-1 bg-rosered-50 hover:bg-rosered-100 text-rosered-700 border border-rosered-200 rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1"
-                                title="Reject artifact with reason"
-                              >
-                                <XCircle className="w-3 h-3" /> Reject
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 border border-stone-200 transition-colors"
-                            title="Edit product"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p.id, p.name)}
-                            className="p-1.5 text-rosered-600 hover:text-rosered-700 rounded-lg hover:bg-rosered-50 border border-rosered-200 transition-colors"
-                            title="Delete artifact"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          <CheckCircle className="w-3 h-3" /> Approve
+                        </button>
+                        <button
+                          onClick={() => setRejectingProduct(p)}
+                          disabled={actionInProgress === p.id}
+                          className="px-2.5 py-1 bg-rosered-50 hover:bg-rosered-100 text-rosered-700 border border-rosered-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                        >
+                          <XCircle className="w-3 h-3" /> Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleOpenEdit(p)}
+                      className="p-1.5 text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 border border-stone-200 transition-colors"
+                      title="Edit product"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id, p.name)}
+                      className="p-1.5 text-rosered-600 hover:text-rosered-700 rounded-lg hover:bg-rosered-50 border border-rosered-200 transition-colors"
+                      title="Delete artifact"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="px-6 py-4 border-t border-stone-100">
+          {/* Desktop Luxury Table (Visible on screens >= md) */}
+          <div className="hidden md:block bg-white rounded-3xl border border-stone-200/90 shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-stone-50/80 border-b border-stone-200/80 text-stone-500 uppercase tracking-widest font-bold text-[10px]">
+                    <th className="py-4 px-6">Artifact & Image</th>
+                    <th className="py-4 px-4">Accredited Seller</th>
+                    <th className="py-4 px-4">Category</th>
+                    <th className="py-4 px-4">Price (COD)</th>
+                    <th className="py-4 px-4">Physical Stock</th>
+                    <th className="py-4 px-4">Sold Units</th>
+                    <th className="py-4 px-4">Balance</th>
+                    <th className="py-4 px-4">Status</th>
+                    <th className="py-4 px-6 text-right">Intervention</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {products.map((p) => {
+                    const isApproved = (p.approvalStatus || p.status) === 'APPROVED';
+                    const isRejected = (p.approvalStatus || p.status) === 'REJECTED';
+                    const isPending = !isApproved && !isRejected;
+                    const totalUnits = p.totalStock ?? p.stock;
+                    const soldUnits = p.soldCount ?? 0;
+                    const balanceUnits = p.balanceStock ?? (totalUnits - soldUnits);
+
+                    return (
+                      <tr key={p.id} className="hover:bg-stone-50/60 transition-colors">
+                        {/* Product Image & Details */}
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            {p.images && p.images[0] ? (
+                              <img
+                                src={p.images[0]}
+                                alt=""
+                                className="w-12 h-12 rounded-xl object-cover border border-stone-200 shrink-0"
+                              />
+                            ) : (
+                              <div
+                                className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 shrink-0"
+                                title="No product image"
+                              >
+                                <Box className="w-5 h-5" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <span className="font-serif font-bold text-stone-900 block truncate max-w-xs">
+                                {p.name}
+                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                <span className="font-mono text-[10px] font-bold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                                  {p.productCode || (p.sku?.match(/\d{4}/) ? `KNPR-${p.sku.match(/\d{4}/)![0]}` : 'KNPR-0001')}
+                                </span>
+                                <span className="text-[10px] text-stone-400 font-mono">
+                                  {p.sku}
+                                </span>
+                              </div>
+                              {/* Variant Split Tags if multi-unit split */}
+                              {p.variants && p.variants.length > 1 && (
+                                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  {p.variants.map((v) => (
+                                    <span
+                                      key={v.id || v.sku}
+                                      className="text-[9px] font-mono text-stone-600 bg-stone-100 px-1 rounded border border-stone-200"
+                                    >
+                                      {v.color || v.size || 'Var'}: {v.stock}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Seller */}
+                        <td className="py-4 px-4">
+                          <p className="font-semibold text-stone-800">{p.sellerName || 'Accredited Merchant'}</p>
+                          <span className="text-[10px] font-mono text-stone-400 block">
+                            ID: {p.sellerId?.slice(0, 8)}...
+                          </span>
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-4 px-4 text-stone-600 font-medium">{p.category}</td>
+
+                        {/* Price */}
+                        <td className="py-4 px-4 font-bold text-stone-900 font-mono">
+                          {formatINR(p.price)}
+                        </td>
+
+                        {/* Total Stock */}
+                        <td className="py-4 px-4 font-mono font-bold text-stone-800">
+                          {totalUnits} units
+                        </td>
+
+                        {/* Sold Units */}
+                        <td className="py-4 px-4 font-mono font-bold text-emerald-700">
+                          {soldUnits} sold
+                        </td>
+
+                        {/* Balance Stock */}
+                        <td className="py-4 px-4 font-mono">
+                          <span
+                            className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full inline-block ${
+                              balanceUnits <= 2
+                                ? 'bg-rosered-50 text-rosered-700 border border-rosered-200'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            }`}
+                          >
+                            {balanceUnits} available
+                          </span>
+                        </td>
+
+                        {/* Verification Status */}
+                        <td className="py-4 px-4">
+                          {isApproved ? (
+                            <Badge variant="emerald" size="sm" dot>
+                              Approved
+                            </Badge>
+                          ) : isRejected ? (
+                            <Badge variant="rosered" size="sm">
+                              Rejected
+                            </Badge>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              Pending IT Cabin
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Admin Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {isPending && (
+                              <>
+                                <button
+                                  onClick={() => handleApprove(p)}
+                                  disabled={actionInProgress === p.id}
+                                  className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1 shadow-xs"
+                                  title="Approve artifact after physical inspection"
+                                >
+                                  <CheckCircle className="w-3 h-3" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => setRejectingProduct(p)}
+                                  disabled={actionInProgress === p.id}
+                                  className="px-2 py-1 bg-rosered-50 hover:bg-rosered-100 text-rosered-700 border border-rosered-200 rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1"
+                                  title="Reject artifact with reason"
+                                >
+                                  <XCircle className="w-3 h-3" /> Reject
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => handleOpenEdit(p)}
+                              className="p-1.5 text-stone-600 hover:text-stone-900 rounded-lg hover:bg-stone-100 border border-stone-200 transition-colors"
+                              title="Edit product"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(p.id, p.name)}
+                              className="p-1.5 text-rosered-600 hover:text-rosered-700 rounded-lg hover:bg-rosered-50 border border-rosered-200 transition-colors"
+                              title="Delete artifact"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 py-4 border-t border-stone-100">
+              <Pagination
+                page={page}
+                perPage={perPage}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={(p) => setPage(p)}
+                onPerPageChange={(n) => {
+                  setPerPage(n);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Mobile Pagination */}
+          <div className="md:hidden bg-white p-3 rounded-2xl border border-stone-200">
             <Pagination
               page={page}
               perPage={perPage}
