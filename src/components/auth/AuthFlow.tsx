@@ -238,6 +238,17 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
     return () => ac.abort();
   }, [step]);
 
+  // Intelligent standalone 6-digit OTP extraction from text, email snippets, or clipboard
+  const extractOtp = (text: string): string => {
+    if (!text) return '';
+    // Look for standalone 6 digits first (e.g., "code is 123456" or "123456")
+    const match = text.match(/\b(\d{6})\b/);
+    if (match) return match[1];
+    // Fallback to stripping non-digits
+    const clean = text.replace(/\D/g, '');
+    return clean.length >= 6 ? clean.slice(0, 6) : clean;
+  };
+
   // When returning from Gmail app, auto-detect 6-digit code in clipboard
   useEffect(() => {
     if (step !== 2) return;
@@ -246,7 +257,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         try {
           if (navigator.clipboard?.readText) {
             const clipText = await navigator.clipboard.readText();
-            const clean = clipText.replace(/\D/g, '').slice(0, 6);
+            const clean = extractOtp(clipText);
             if (clean.length === 6) {
               setOtp(clean);
               clearApiError();
@@ -267,7 +278,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         return;
       }
       const text = await navigator.clipboard.readText();
-      const clean = text.replace(/\D/g, '').slice(0, 6);
+      const clean = extractOtp(text);
       if (clean.length === 6) {
         setOtp(clean);
         clearApiError();
@@ -343,20 +354,23 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
   // ── STEP 1: Phone ─────────────────────────────────────────────────────────
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateStep(1)) return;
     setIsSubmitting(true);
     clearApiError();
+    const cleanEmail = email.trim().toLowerCase();
+    setEmail(cleanEmail);
     try {
       if (IS_UI_PREVIEW) {
         await previewDelay();
         showToast('UI preview: OTP email not sent (backend not connected).');
       } else {
-        const res = await sendOtp(email.trim());
+        const res = await sendOtp(cleanEmail);
         showToast(res.message || 'OTP sent to your email.');
       }
       setResendCooldown(60);
       setOtp('');
-      savePendingFlow(email.trim(), 60);
+      savePendingFlow(cleanEmail, 60);
       setStep(2);
     } catch (err) {
       setApiError(errorMessage(err, 'Could not send OTP. Please try again.'));
@@ -366,20 +380,22 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
   };
 
   const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || isSubmitting) return;
     setIsSubmitting(true);
     clearApiError();
+    const cleanEmail = email.trim().toLowerCase();
+    setEmail(cleanEmail);
     try {
       if (IS_UI_PREVIEW) {
         await previewDelay();
         showToast('UI preview: OTP email not resent (backend not connected).');
       } else {
-        const res = await sendOtp(email.trim());
+        const res = await sendOtp(cleanEmail);
         showToast(res.message || 'New OTP sent! Please check your latest email.');
       }
       setResendCooldown(60);
       setOtp('');
-      savePendingFlow(email.trim(), 60);
+      savePendingFlow(cleanEmail, 60);
     } catch (err) {
       setApiError(errorMessage(err, 'Failed to resend OTP.'));
     } finally {
@@ -390,7 +406,8 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
   // ── STEP 2: OTP ───────────────────────────────────────────────────────────
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanOtp = otp.trim().replace(/\D/g, '');
+    if (isSubmitting) return;
+    const cleanOtp = extractOtp(otp);
     if (cleanOtp.length !== 6) {
       setFieldErrors({} as ProfileErrors);
       setApiError('Please enter the 6-digit OTP sent to your email.');
@@ -405,7 +422,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
         // else = new user path (full 6-step onboarding).
         setRequiresProfile(cleanOtp !== PREVIEW_RETURNING_OTP);
       } else {
-        const res = await verifyOtp(email.trim(), cleanOtp);
+        const res = await verifyOtp(email.trim().toLowerCase(), cleanOtp);
         setRequiresProfile(res.requiresProfile);
       }
       clearPendingFlow();
@@ -799,10 +816,10 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onFinished }) => {
                 clearApiError();
               }}
               onPaste={(e) => {
-                e.preventDefault();
                 const pasteText = e.clipboardData.getData('text') || '';
-                const digits = pasteText.replace(/\D/g, '').slice(0, 6);
+                const digits = extractOtp(pasteText);
                 if (digits) {
+                  e.preventDefault();
                   setOtp(digits);
                   clearApiError();
                 }

@@ -82,10 +82,15 @@ export function createAuthRouter({ env, supabase }) {
     let data = null;
     let error = null;
 
-    // GoTrue token types: 'email' (standard email OTP), 'magiclink' (token from signInWithOtp/magiclink),
-    // and 'signup' (new user signup confirmation). Trying each candidates ensures that regardless of
-    // whether Supabase issued a signup, magiclink, or email token, verification succeeds.
-    const candidateTypes = ['email', 'magiclink', 'signup'];
+    // Check whether an account already exists for this email to prioritize the correct token type.
+    // Existing users use 'email' OTP; brand new signups use 'signup' confirmation token.
+    const { data: existingProfile } = await supabase.service
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    const candidateTypes = existingProfile ? ['email', 'signup'] : ['signup', 'email'];
     for (const otpType of candidateTypes) {
       try {
         const attempt = await supabase.anon.auth.verifyOtp({ email, token: otp, type: otpType });
