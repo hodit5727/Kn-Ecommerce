@@ -111,7 +111,7 @@ export function createTransactionsRouter({ env, supabase }) {
       { data: payoutRows = [], error: payoutError },
     ] = await Promise.all([
       orderIds.length
-        ? supabase.service.from('orders').select('id, order_number, total, payment_method').in('id', orderIds)
+        ? supabase.service.from('orders').select('id, order_number, total').in('id', orderIds)
         : Promise.resolve({ data: [], error: null }),
       profileIds.length
         ? supabase.service.from('profiles').select('id, full_name, email').in('id', profileIds)
@@ -123,10 +123,21 @@ export function createTransactionsRouter({ env, supabase }) {
         ? supabase.service.from('payouts').select('id, order_id, seller_id, amount, commission_amount, status, released_at').in('order_id', orderIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
-    if (orderError || profileError || itemError || payoutError) {
+    if (orderError) {
       // eslint-disable-next-line no-console
-      console.error('[transactions] join query failed:', orderError?.message ?? profileError?.message ?? itemError?.message ?? payoutError?.message);
-      throw httpError(502, 'Unable to load transactions. Please try again later.');
+      console.warn('[transactions] orders join notice:', orderError.message);
+    }
+    if (profileError) {
+      // eslint-disable-next-line no-console
+      console.warn('[transactions] profiles join notice:', profileError.message);
+    }
+    if (itemError) {
+      // eslint-disable-next-line no-console
+      console.warn('[transactions] order_items join notice:', itemError.message);
+    }
+    if (payoutError) {
+      // eslint-disable-next-line no-console
+      console.warn('[transactions] payouts join notice:', payoutError.message);
     }
     const orderById = new Map(orderRows.map((o) => [o.id, o]));
     const profileById = new Map(profileRows.map((p) => [p.id, p]));

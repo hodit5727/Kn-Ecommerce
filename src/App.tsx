@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { ScrollToTop } from './components/common/ScrollToTop';
 import { AuthProvider } from './auth/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -9,6 +10,7 @@ import { AppRoutes } from './routes/AppRoutes';
 export const App: React.FC = () => {
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+      <ScrollToTop />
       <AuthProvider>
         <ToastProvider>
           <CartProvider>

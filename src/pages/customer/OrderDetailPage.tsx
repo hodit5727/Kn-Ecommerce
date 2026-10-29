@@ -14,6 +14,7 @@ import { Badge } from '../../components/common/Badge';
 import { useToast } from '../../context/ToastContext';
 import { formatINR } from '../../lib/currency';
 import { OrderProductImage } from '../../components/order/OrderProductImage';
+import { DeliveryBillModal } from '../../components/order/DeliveryBillModal';
 import {
   ChevronLeft,
   MapPin,
@@ -49,6 +50,7 @@ export const OrderDetailPage: React.FC = () => {
 
   // Print mode: 'standard' or 'thermal'
   const [printMode, setPrintMode] = useState<'standard' | 'thermal'>('standard');
+  const [isBillModalOpen, setIsBillModalOpen] = useState(false);
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
@@ -152,10 +154,7 @@ export const OrderDetailPage: React.FC = () => {
   };
 
   const triggerStandardPrint = () => {
-    setPrintMode('standard');
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    setIsBillModalOpen(true);
   };
 
   if (error) {
@@ -713,6 +712,13 @@ export const OrderDetailPage: React.FC = () => {
           order={order}
           onSuccess={fetchOrder}
         />
+        {/* Official Tax Invoice & Delivery Bill Modal */}
+        {isBillModalOpen && (
+          <DeliveryBillModal
+            order={order}
+            onClose={() => setIsBillModalOpen(false)}
+          />
+        )}
       </div>
     </>
   );

@@ -3,12 +3,14 @@ import { orderService } from '../../services/orderService';
 import { Order, CODOrderStatus } from '../../types/order';
 import { ErrorState } from '../../components/common/ErrorState';
 import { formatINR } from '../../lib/currency';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, FileText } from 'lucide-react';
+import { DeliveryBillModal } from '../../components/order/DeliveryBillModal';
 
 export const SellerOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBillOrder, setSelectedBillOrder] = useState<Order | null>(null);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -288,6 +290,13 @@ export const SellerOrdersPage: React.FC = () => {
                           <span className="block text-[10px] text-stone-400 mt-1">
                             {progress.desc}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBillOrder(order)}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-burgundy hover:underline mt-1.5"
+                          >
+                            <FileText className="w-3 h-3" /> Invoice Slip
+                          </button>
                         </td>
                       </tr>
                     );
@@ -297,6 +306,13 @@ export const SellerOrdersPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedBillOrder && (
+        <DeliveryBillModal
+          order={selectedBillOrder}
+          onClose={() => setSelectedBillOrder(null)}
+        />
       )}
     </div>
   );

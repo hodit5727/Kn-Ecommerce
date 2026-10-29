@@ -1,7 +1,18 @@
 import React from 'react';
 import { Order } from '../../types/order';
 import { formatINR } from '../../lib/currency';
-import { Printer, X, ShieldCheck, CheckCircle2, Building, Phone, Mail, MapPin, Calendar, Package } from 'lucide-react';
+import {
+  Printer,
+  X,
+  User,
+  Mail,
+  MapPin,
+  ShoppingCart,
+  Package,
+  Gift,
+  Briefcase,
+  Check,
+} from 'lucide-react';
 import { Button } from '../common/Button';
 
 interface DeliveryBillModalProps {
@@ -16,24 +27,93 @@ export const DeliveryBillModal: React.FC<DeliveryBillModalProps> = ({ order, onC
     window.print();
   };
 
-  const orderCode = order.orderCode || (order.orderNumber?.match(/\d{4}$/) ? `KNOR-${order.orderNumber.match(/\d{4}/)![0]}` : order.orderNumber);
-  const customerPhone = order.customerPhone || order.shippingAddress?.phone || 'Not provided';
+  // Format order date: e.g. "28 Oct 2026"
+  const orderDate = order.createdAt
+    ? new Date(order.createdAt).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+
+  // Year for invoice numbering
+  const orderYear = order.createdAt ? new Date(order.createdAt).getFullYear() : new Date().getFullYear();
+
+  // Generate KS invoice number matching Image 2 KS-2026-01330 format
+  const rawDigits = (order.orderNumber || order.id || '1001').replace(/\D/g, '');
+  const invoiceSuffix = rawDigits.length >= 4 ? rawDigits.slice(-5).padStart(5, '0') : order.id.slice(0, 5).toUpperCase();
+  const invoiceNumber = `KS-${orderYear}-${invoiceSuffix}`;
+
+  // Customer details
   const customerName = order.customerName || order.shippingAddress?.fullName || 'Campus Patron';
-  const customerEmail = order.customerEmail || 'N/A';
-  const sellerStore = order.sellerStoreName || order.sellerName || order.items[0]?.product?.sellerName || 'Store';
-  const sellerEmail = order.sellerEmail || order.items[0]?.product?.sellerEmail || '';
-  const sellerPhone = order.sellerPhone || order.items[0]?.product?.sellerPhone || '';
-  const sellerAddress = order.sellerAddress || order.items[0]?.product?.sellerAddress || '';
+  const customerEmail = order.customerEmail || 'customer@k-shop.example';
+  const streetAddress = order.shippingAddress?.streetAddress || 'Campus Hostel / Delivery Point';
+  const apartmentSuite = order.shippingAddress?.apartmentSuite;
+  const city = order.shippingAddress?.city || 'Campus';
+  const postalCode = order.shippingAddress?.postalCode || '600028';
+  const formattedAddress = `${streetAddress}${apartmentSuite ? `, ${apartmentSuite}` : ''}`;
+  const formattedCityPin = `${city}${postalCode ? `, ${postalCode}` : ''}`;
+
+  // Payment status
+  const isPaid = order.orderStatus === 'COD_DELIVERED' || Boolean(order.receivedAmount && order.receivedAmount > 0);
+  const paymentStatusLabel = isPaid ? 'PAID' : 'CASH ON DELIVERY';
+
+  // Subtotal, discount, tax, total
+  const subtotal = order.subtotal || order.items?.reduce((acc, it) => acc + (it.product?.price || 0) * it.quantity, 0) || order.totalAmount;
+  const discount = order.discount || 0;
+  const tax = 0; // ₹0.00
+  const totalAmount = order.totalAmount || (subtotal - discount);
+
+  // Transaction reference ID
+  const transactionId = (order as any).transactionId || (order as any).paymentReference || (order as any).txn_ref || (order.id ? `TXN-${order.id.slice(0, 10).toUpperCase()}` : '—');
+
+  // Helper to pick item icon
+  const getItemIcon = (index: number) => {
+    switch (index % 3) {
+      case 0:
+        return <Package className="w-5 h-5 text-burgundy" />;
+      case 1:
+        return <Gift className="w-5 h-5 text-burgundy" />;
+      default:
+        return <Briefcase className="w-5 h-5 text-burgundy" />;
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static">
-      <div className="bg-white rounded-3xl max-w-2xl w-full border border-cream-200 shadow-2xl overflow-hidden print:border-none print:shadow-none print:max-w-none">
+    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #kshop-invoice-root, #kshop-invoice-root * {
+            visibility: visible;
+          }
+          #kshop-invoice-root {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 16px !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+
+      <div className="bg-white rounded-3xl max-w-3xl w-full border border-cream-200 shadow-2xl overflow-hidden print:border-none print:shadow-none print:max-w-none my-6">
         {/* Modal Controls - Hidden during Print */}
         <div className="p-4 bg-stone-900 text-white flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-amber-400" />
             <span className="font-serif font-bold text-sm tracking-wide">
-              Delivery Challan & Tax Invoice #{orderCode}
+              Official Tax Invoice & Delivery Bill · {invoiceNumber}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -42,9 +122,9 @@ export const DeliveryBillModal: React.FC<DeliveryBillModalProps> = ({ order, onC
               size="sm"
               onClick={handlePrint}
               leftIcon={<Printer className="w-3.5 h-3.5" />}
-              className="bg-white text-stone-900 hover:bg-stone-100 border-none font-semibold text-xs"
+              className="bg-white text-stone-900 hover:bg-stone-100 border-none font-semibold text-xs shadow-xs"
             >
-              Print Slip / PDF
+              Print Invoice / PDF
             </Button>
             <button
               onClick={onClose}
@@ -56,193 +136,292 @@ export const DeliveryBillModal: React.FC<DeliveryBillModalProps> = ({ order, onC
           </div>
         </div>
 
-        {/* Printable Invoice & Delivery Slip Content */}
-        <div className="p-6 sm:p-8 space-y-6 text-stone-900 bg-white" id="printable-bill">
-          {/* Slip Header */}
-          <div className="flex items-start justify-between border-b-2 border-stone-900 pb-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-serif font-extrabold text-2xl tracking-wider text-burgundy">
-                  K-SHOP
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-widest bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
-                  Campus Marketplace
-                </span>
+        {/* ========================================================================= */}
+        {/* Printable Official Tax Invoice matching Image 2 visual design             */}
+        {/* ========================================================================= */}
+        <div
+          id="kshop-invoice-root"
+          className="p-6 sm:p-10 bg-white text-stone-900 space-y-6 select-text"
+        >
+          {/* Top Header Row */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Left: Burgundy K logo + K-SHOP branding */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-14 h-14 rounded-2xl bg-[#7A1C28] flex items-center justify-center text-white font-serif font-black text-3xl shadow-sm shrink-0">
+                K
               </div>
-              <p className="text-xs text-stone-500 mt-1">
-                Official Campus Commerce · COD Delivery Slip & Tax Receipt
-              </p>
+              <div>
+                <h1 className="font-serif font-extrabold text-3xl sm:text-4xl tracking-tight text-stone-900">
+                  K-SHOP
+                </h1>
+                <p className="text-[10px] sm:text-[11px] font-semibold tracking-widest text-[#7A1C28] uppercase mt-0.5">
+                  QUALITY PRODUCTS • BETTER EVERYDAY
+                </p>
+              </div>
             </div>
 
+            {/* Right: Curved Burgundy INVOICE Badge */}
             <div className="text-right">
-              <span className="font-mono font-bold text-lg text-stone-900 block">
-                {orderCode}
-              </span>
-              <span className="text-[11px] text-stone-500 flex items-center justify-end gap-1 mt-0.5">
-                <Calendar className="w-3 h-3" />
-                {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </span>
+              <div className="inline-block bg-[#7A1C28] text-white px-7 py-2 rounded-2xl shadow-sm">
+                <span className="font-serif font-bold tracking-widest text-xl sm:text-2xl uppercase">
+                  INVOICE
+                </span>
+              </div>
+              <p className="text-[10px] font-bold tracking-widest text-stone-500 uppercase mt-1">
+                SHOP • ORDER • ENJOY
+              </p>
             </div>
           </div>
 
-          {/* Delivery & Seller Grid */}
-          <div className="grid grid-cols-2 gap-6 text-xs pb-4 border-b border-stone-200">
-            {/* Customer Details */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                Delivered To (Customer)
-              </span>
-              <p className="font-bold text-sm text-stone-900">{customerName}</p>
-              <p className="text-stone-600 flex items-center gap-1.5">
-                <Phone className="w-3 h-3 text-burgundy shrink-0" />
-                <span className="font-mono font-semibold">{customerPhone}</span>
-              </p>
-              <p className="text-stone-600 flex items-center gap-1.5">
-                <Mail className="w-3 h-3 text-stone-400 shrink-0" />
-                <span>{customerEmail}</span>
-              </p>
-              <p className="text-stone-600 flex items-start gap-1.5 pt-1">
-                <MapPin className="w-3 h-3 text-stone-400 shrink-0 mt-0.5" />
-                <span>
-                  {order.shippingAddress?.streetAddress}
-                  {order.shippingAddress?.apartmentSuite ? `, ${order.shippingAddress.apartmentSuite}` : ''}
-                  , {order.shippingAddress?.city} - {order.shippingAddress?.postalCode}
+          {/* Metadata Row: Invoice Details on Left, Thank You on Right */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center pt-2">
+            {/* Left: Invoice Number, Date, Status */}
+            <div className="sm:col-span-7 space-y-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-stone-700 w-32 shrink-0">
+                  Invoice Number
                 </span>
-              </p>
-              {order.customerBusinessId && (
-                <span className="inline-block font-mono text-[9px] font-bold text-burgundy bg-burgundy/5 px-2 py-0.5 rounded border border-burgundy/20 mt-1">
-                  ID: {order.customerBusinessId}
+                <span className="text-stone-300">|</span>
+                <span className="font-serif font-bold text-[#7A1C28] text-base tracking-wide">
+                  {invoiceNumber}
                 </span>
-              )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-stone-700 w-32 shrink-0">
+                  Invoice Date
+                </span>
+                <span className="text-stone-300">|</span>
+                <span className="text-stone-800 font-medium">{orderDate}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-stone-700 w-32 shrink-0">
+                  Payment Status
+                </span>
+                <span className="text-stone-300">|</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-[#E8F5E9] text-[#2E7D32] border border-[#C8E6C9]">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>{paymentStatusLabel}</span>
+                </span>
+              </div>
             </div>
 
-            {/* Seller & Dispatch Details */}
-            <div className="space-y-1 text-right">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                Sold & Dispatched By
-              </span>
-              <p className="font-bold text-sm text-stone-900">{sellerStore}</p>
-              {order.sellerPersonName && order.sellerPersonName !== sellerStore && (
-                <p className="text-stone-600 text-[11px] font-medium">
-                  Proprietor: {order.sellerPersonName}
+            {/* Right: Thank you badge with cart icon */}
+            <div className="sm:col-span-5 flex items-center justify-start sm:justify-end gap-3 sm:pl-4 sm:border-l sm:border-stone-200">
+              <div className="w-12 h-12 rounded-full bg-[#FCF4F3] border border-[#F5D5D3] flex items-center justify-center text-[#7A1C28] shrink-0">
+                <ShoppingCart className="w-5 h-5 text-[#7A1C28]" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base text-[#7A1C28] leading-tight">
+                  Thank you
+                </h3>
+                <p className="text-xs font-semibold text-stone-800">
+                  for shopping with K-SHOP!
                 </p>
-              )}
-              {sellerEmail && (
-                <p className="text-stone-600 flex items-center justify-end gap-1.5 text-xs">
-                  <Mail className="w-3 h-3 text-stone-400" />
-                  <span>{sellerEmail}</span>
+                <p className="text-[11px] text-stone-500">
+                  Your support helps us grow
                 </p>
-              )}
-              {sellerPhone && (
-                <p className="text-stone-600 font-mono flex items-center justify-end gap-1.5 text-xs">
-                  <Phone className="w-3 h-3 text-burgundy" />
-                  <span>{sellerPhone}</span>
-                </p>
-              )}
-              {sellerAddress && (
-                <p className="text-stone-500 text-[10px] flex items-center justify-end gap-1.5 max-w-[240px] ml-auto">
-                  <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
-                  <span className="truncate">{sellerAddress}</span>
-                </p>
-              )}
-              <div className="pt-2 flex justify-end">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Escrow Verified
-                </span>
+                <div className="w-8 h-[2px] bg-[#7A1C28] mt-1.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Burgundy Separator Bar */}
+          <div className="h-[1.5px] bg-[#8B1E2D] w-full" />
+
+          {/* Bill To Section */}
+          <div className="space-y-2.5">
+            <h2 className="font-serif font-bold text-base sm:text-lg text-[#7A1C28]">
+              Bill To:
+            </h2>
+            <div className="space-y-1.5 text-xs sm:text-sm text-stone-700">
+              <div className="flex items-center gap-2.5 font-semibold text-stone-900">
+                <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 shrink-0">
+                  <User className="w-3.5 h-3.5 text-stone-600" />
+                </div>
+                <span>{customerName}</span>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 shrink-0">
+                  <Mail className="w-3.5 h-3.5 text-stone-600" />
+                </div>
+                <span>{customerEmail}</span>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 shrink-0 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-stone-600" />
+                </div>
+                <div>
+                  <p>{formattedAddress}</p>
+                  <p className="text-stone-500">{formattedCityPin}</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Itemized Table */}
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block mb-2">
-              Order Specification & Items
-            </span>
-            <table className="w-full text-left text-xs border border-stone-200 rounded-xl overflow-hidden">
-              <thead className="bg-stone-50 border-b border-stone-200 text-stone-600 uppercase font-semibold text-[10px]">
+          <div className="overflow-hidden border border-[#F2DEDE] rounded-xl">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead className="bg-[#FCF4F3] border-b border-[#F2DEDE] text-[#7A1C28] font-serif font-bold">
                 <tr>
-                  <th className="py-2.5 px-3">Item Description</th>
-                  <th className="py-2.5 px-3">SKU</th>
-                  <th className="py-2.5 px-3 text-center">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Unit Price</th>
-                  <th className="py-2.5 px-3 text-right">Line Total</th>
+                  <th className="py-3 px-4 w-[46%]">Item</th>
+                  <th className="py-3 px-3 text-center w-[12%]">Qty</th>
+                  <th className="py-3 px-3 text-right w-[14%]">Unit Price</th>
+                  <th className="py-3 px-3 text-right w-[12%]">Tax</th>
+                  <th className="py-3 px-4 text-right w-[16%]">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-100">
-                {order.items.map((item, idx) => (
-                  <tr key={item.id || idx}>
-                    <td className="py-2.5 px-3 font-medium text-stone-900">
-                      {item.product.name}
-                      {(item.selectedColor || item.selectedSize) && (
-                        <span className="block text-[10px] text-stone-500 font-normal">
-                          {[item.selectedColor, item.selectedSize].filter(Boolean).join(' · ')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-stone-600">
-                      {item.product.sku || 'KNPR-DEF'}
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-bold">
-                      {item.quantity}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-stone-600">
-                      {formatINR(item.product.price)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-bold text-stone-900">
-                      {formatINR(item.product.price * item.quantity)}
+              <tbody className="divide-y divide-[#F6E8E8]">
+                {order.items && order.items.length > 0 ? (
+                  order.items.map((item, index) => {
+                    const unitPrice = item.product?.price || 0;
+                    const lineAmount = unitPrice * item.quantity;
+                    const subDesc =
+                      [
+                        item.product?.category,
+                        item.product?.sku ? `SKU: ${item.product.sku}` : null,
+                        item.selectedColor ? `Color: ${item.selectedColor}` : null,
+                        item.selectedSize ? `Size: ${item.selectedSize}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' • ') || 'Standard Product Package';
+
+                    return (
+                      <tr key={item.id || index} className="hover:bg-cream-50/40">
+                        {/* Item column with icon */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-[#FCF4F3] border border-[#F5D5D3] flex items-center justify-center shrink-0">
+                              {getItemIcon(index)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-stone-900 truncate">
+                                {item.product?.name || 'K-Shop Product'}
+                              </p>
+                              <p className="text-[11px] text-stone-500 truncate">
+                                {subDesc}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Qty */}
+                        <td className="py-3.5 px-3 text-center text-stone-800 font-medium">
+                          {item.quantity}
+                        </td>
+
+                        {/* Unit Price */}
+                        <td className="py-3.5 px-3 text-right text-stone-700 font-mono">
+                          {formatINR(unitPrice)}
+                        </td>
+
+                        {/* Tax */}
+                        <td className="py-3.5 px-3 text-right text-stone-700 font-mono">
+                          ₹0.00
+                        </td>
+
+                        {/* Amount */}
+                        <td className="py-3.5 px-4 text-right font-bold text-stone-900 font-mono">
+                          {formatINR(lineAmount)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 px-4 text-center text-stone-500">
+                      No order items recorded.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
-          {/* Payment & Amount Summary */}
-          <div className="bg-cream-50/80 rounded-2xl p-4 border border-cream-200 flex items-center justify-between flex-wrap gap-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                Payment Protocol:
-              </span>
-              <div className="flex items-center gap-1.5 font-bold text-stone-900 text-xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Cash on Delivery (COD) Collected</span>
+          {/* Payment Method & Totals Breakdown Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-start pt-2">
+            {/* Left: Payment Method and Transaction ID */}
+            <div className="sm:col-span-6 space-y-3.5">
+              <div>
+                <h3 className="font-bold text-xs uppercase tracking-wider text-[#7A1C28]">
+                  Payment Method
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-800 mt-1">
+                  Cash on Delivery / Online Payment
+                </p>
               </div>
-              <p className="text-[11px] text-stone-500">
-                Authorized platform delivery handover completed.
-              </p>
+
+              <div className="border-t border-stone-200 pt-3">
+                <h3 className="font-bold text-xs uppercase tracking-wider text-[#7A1C28]">
+                  Transaction ID
+                </h3>
+                <p className="font-mono text-xs sm:text-sm text-stone-800 mt-1">
+                  {transactionId}
+                </p>
+              </div>
             </div>
 
-            <div className="text-right space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block">
-                Total Amount Paid
-              </span>
-              <span className="text-xl font-bold font-serif text-burgundy block">
-                {formatINR(order.totalAmount)}
-              </span>
-              <span className="text-[10px] text-emerald-700 font-bold block">
-                ✓ Full Balance Reconciled
-              </span>
+            {/* Right: Subtotal, Discount, Tax and Burgundy Total Block */}
+            <div className="sm:col-span-6 space-y-2">
+              <div className="space-y-1.5 text-xs sm:text-sm text-stone-700 px-2">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-stone-700">Subtotal:</span>
+                  <span className="font-mono font-medium text-stone-900">
+                    {formatINR(subtotal)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="font-semibold text-stone-700">Discount:</span>
+                  <span className="font-mono font-medium text-stone-900">
+                    {discount > 0 ? `-${formatINR(discount)}` : '₹0.00'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="font-semibold text-stone-700">Tax:</span>
+                  <span className="font-mono font-medium text-stone-900">
+                    {formatINR(tax)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Solid Burgundy Total Pill */}
+              <div className="bg-[#7A1C28] text-white rounded-xl px-5 py-3.5 flex items-center justify-between shadow-xs">
+                <span className="font-serif font-bold text-lg sm:text-xl">
+                  Total:
+                </span>
+                <span className="font-serif font-extrabold text-xl sm:text-2xl tracking-wide">
+                  {formatINR(totalAmount)}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Signatures & Footer Note */}
-          <div className="pt-6 border-t border-stone-200 flex items-end justify-between text-[11px] text-stone-500">
-            <div>
-              <p className="font-semibold text-stone-700">Campus Logistics Verification</p>
-              <p>Physical package inspected and accepted by recipient.</p>
-              <p className="text-[9px] text-stone-400 mt-1">Generated by K-Shop Central Ledger</p>
+          {/* Footer Note */}
+          <div className="pt-6 border-t border-stone-200 grid grid-cols-1 sm:grid-cols-12 gap-4 text-xs">
+            {/* Left side with burgundy vertical accent */}
+            <div className="sm:col-span-7 flex items-start gap-2.5">
+              <div className="w-1 self-stretch bg-[#7A1C28] rounded-full shrink-0" />
+              <div>
+                <p className="font-serif font-bold text-stone-900 text-xs sm:text-sm">
+                  Thank you for shopping with K-SHOP!
+                </p>
+                <p className="text-[11px] text-stone-500 mt-0.5">
+                  For support: support@k-shop.example
+                </p>
+              </div>
             </div>
 
-            <div className="text-right border-t border-dashed border-stone-400 pt-2 w-44">
-              <span className="text-[10px] uppercase font-bold text-stone-700 block">
-                Courier / Signatory
-              </span>
-              <span className="text-[9px] text-stone-400">Verified & Delivered</span>
+            {/* Right side note */}
+            <div className="sm:col-span-5 text-stone-500 text-[11px] sm:text-right sm:border-l sm:border-stone-200 sm:pl-4">
+              <p>This is a computer-generated invoice.</p>
+              <p className="mt-0.5">
+                If you have any questions, please contact our support team.
+              </p>
             </div>
           </div>
         </div>

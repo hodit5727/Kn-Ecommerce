@@ -350,6 +350,138 @@ export const ProductsPage: React.FC = () => {
         onClose={() => setSelectedQuickView(null)}
         product={selectedQuickView}
       />
+
+      {/* Mobile Filter Slide-Over Drawer */}
+      {isFilterDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-stone-900/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsFilterDrawerOpen(false)}
+          />
+
+          <div className="relative w-full max-w-xs sm:max-w-sm h-full bg-white shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-300">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-cream-200 bg-ivory">
+              <span className="font-serif font-bold text-base text-stone-900 flex items-center gap-2">
+                <Filter className="w-4 h-4 text-burgundy" /> Filter Products
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="text-xs text-stone-500 hover:text-burgundy font-medium flex items-center gap-1 px-2 py-1 rounded-md"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  className="p-1.5 rounded-lg text-stone-500 hover:bg-cream-200 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {/* Category Filter */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-stone-700 block mb-2.5">
+                  Category
+                </label>
+                <div className="space-y-1.5">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-medium transition-colors ${
+                        selectedCategory === cat
+                          ? 'bg-burgundy text-white font-semibold shadow-xs'
+                          : 'text-stone-700 bg-cream-50/60 hover:bg-cream-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range Filter */}
+              <div className="pt-4 border-t border-cream-200">
+                <label className="text-xs font-bold uppercase tracking-wider text-stone-700 block mb-2.5">
+                  Price Range (₹)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min ₹"
+                    value={minPrice ?? ''}
+                    onChange={(e) => setMinPrice(e.target.value ? Number(e.target.value) : undefined)}
+                    className="w-full bg-ivory border border-stone-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-burgundy"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max ₹"
+                    value={maxPrice ?? ''}
+                    onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : undefined)}
+                    className="w-full bg-ivory border border-stone-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-burgundy"
+                  />
+                </div>
+              </div>
+
+              {/* In Stock Availability */}
+              <div className="pt-4 border-t border-cream-200">
+                <label className="flex items-center gap-2.5 text-xs font-medium text-stone-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={inStockOnly}
+                    onChange={(e) => setInStockOnly(e.target.checked)}
+                    className="accent-burgundy w-4 h-4 rounded cursor-pointer"
+                  />
+                  <span>In Stock Only (Ready for COD)</span>
+                </label>
+              </div>
+
+              {/* Rating Filter */}
+              <div className="pt-4 border-t border-cream-200">
+                <label className="text-xs font-bold uppercase tracking-wider text-stone-700 block mb-2.5">
+                  Minimum Rating
+                </label>
+                <div className="flex gap-2">
+                  {[4.5, 4.8, 5.0].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setMinRating(minRating === r ? undefined : r)}
+                      className={`flex-1 py-1.5 text-xs rounded-xl border font-semibold transition-all ${
+                        minRating === r
+                          ? 'bg-burgundy text-white border-burgundy'
+                          : 'bg-ivory text-stone-700 border-stone-200 hover:bg-cream-100'
+                      }`}
+                    >
+                      ★ {r}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer CTA */}
+            <div className="p-4 border-t border-cream-200 bg-white">
+              <Button
+                variant="primary"
+                size="md"
+                className="w-full"
+                onClick={() => setIsFilterDrawerOpen(false)}
+              >
+                Apply Filters ({products.length} Products)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -75,45 +75,46 @@ export const Footer: React.FC = () => {
                 K
               </div>
               <span className="font-serif font-extrabold text-xl tracking-wider text-stone-900">
-                K-SHOP LUXURY
+                K-SHOP
               </span>
             </div>
             <p className="text-xs text-stone-500 max-w-sm leading-relaxed">
-              A high-precision multi-role marketplace engineered for discerning collectors, master ateliers,
-              and sovereign governance. Built with White/Ivory aesthetic integrity and Deep Burgundy identity.
+              Your trusted marketplace for verified products, Cash on Delivery (COD) payment,
+              safe campus delivery, and easy 7-day hassle-free returns.
             </p>
-            <div className="pt-2 text-xs text-stone-600">
-              Operating under COD Settlement Standard ISO-9001-COD.
+            <div className="pt-2 text-xs text-stone-600 font-medium">
+              100% Genuine Quality Products · Pay on Delivery
             </div>
           </div>
 
           <div>
             <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
-              The Collection
+              Shop Categories
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
-              <li><Link to="/products?category=Timepieces" className="hover:text-burgundy">Haute Horlogerie</Link></li>
-              <li><Link to="/products?category=Furniture%20%26%20Decor" className="hover:text-burgundy">Architectural Seating</Link></li>
-              <li><Link to="/products?category=High-End%20Audio" className="hover:text-burgundy">Acoustic Reference</Link></li>
-              <li><Link to="/products?category=Fine%20Jewelry" className="hover:text-burgundy">Fine Gems & Platinum</Link></li>
-              <li><Link to="/products?category=Leather%20Goods" className="hover:text-burgundy">Tuscan Leather</Link></li>
+              <li><Link to="/products?category=Timepieces" className="hover:text-burgundy">Watches</Link></li>
+              <li><Link to="/products?category=Fashion" className="hover:text-burgundy">Fashion</Link></li>
+              <li><Link to="/products?category=Mobiles" className="hover:text-burgundy">Mobiles</Link></li>
+              <li><Link to="/products?category=Electronics" className="hover:text-burgundy">Electronics</Link></li>
+              <li><Link to="/products?category=Beauty" className="hover:text-burgundy">Beauty</Link></li>
+              <li><Link to="/products" className="hover:text-burgundy font-semibold text-burgundy">All Products →</Link></li>
             </ul>
           </div>
 
           <div>
             <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
-              Atelier & Commerce
+              Orders & Support
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
-              <li><Link to="/become-seller" className="hover:text-burgundy">Become an Accredited Seller</Link></li>
-              <li><Link to="/seller" className="hover:text-burgundy">Seller Portal</Link></li>
-              <li><Link to="/orders" className="hover:text-burgundy">Requisition Status</Link></li>
-              <li><Link to="/refunds" className="hover:text-burgundy">Arbitration & Claims</Link></li>
-              <li><Link to="/support" className="hover:text-burgundy">Patron Concierge</Link></li>
+              <li><Link to="/orders" className="hover:text-burgundy">My Orders & Tracking</Link></li>
+              <li><Link to="/refunds" className="hover:text-burgundy">Refunds & Returns</Link></li>
+              <li><Link to="/support" className="hover:text-burgundy">Customer Support</Link></li>
+              <li><Link to="/become-seller" className="hover:text-burgundy">Sell on K-Shop</Link></li>
+              <li><Link to="/seller" className="hover:text-burgundy">Seller Dashboard</Link></li>
               <li>
                 <Link to="/delivery/login" className="hover:text-burgundy flex items-center gap-1.5 font-medium text-stone-700">
                   <Truck className="w-3.5 h-3.5 text-burgundy" />
-                  <span>Campus Delivery Portal</span>
+                  <span>Delivery Agent Login</span>
                 </Link>
               </li>
             </ul>
@@ -121,30 +122,29 @@ export const Footer: React.FC = () => {
 
           <div>
             <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
-              Governance & Legal
+              Policies & Info
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
-              <li><Link to="/privacy-policy" className="hover:text-burgundy">Privacy Policy (GDPR)</Link></li>
-              <li><Link to="/terms-of-service" className="hover:text-burgundy">Terms of Service (COD)</Link></li>
-              <li><Link to="/faq" className="hover:text-burgundy">FAQ & Knowledgebase</Link></li>
-              <li><Link to="/contact" className="hover:text-burgundy">Legal & Campus Contact</Link></li>
+              <li><Link to="/privacy-policy" className="hover:text-burgundy">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="hover:text-burgundy">Terms of Service</Link></li>
+              <li><Link to="/faq" className="hover:text-burgundy">Frequently Asked Questions (FAQ)</Link></li>
+              <li><Link to="/contact" className="hover:text-burgundy">Contact Us</Link></li>
               <li>
                 <button
                   type="button"
                   onClick={openCookieSettingsModal}
                   className="hover:text-burgundy text-left text-xs text-stone-600 cursor-pointer"
                 >
-                  Cookie Preferences
+                  Cookie Settings
                 </button>
               </li>
-              <li><Link to="/delivery/login" className="hover:text-burgundy text-stone-500">Delivery Operator Sign In</Link></li>
-              <li><Link to="/admin" className="hover:text-burgundy text-stone-400">Admin Control Tower</Link></li>
+              <li><Link to="/admin" className="hover:text-burgundy text-stone-500">Admin Login</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-cream-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-600 gap-3">
-          <p>© 2026 K-Shop Sovereign Marketplace. All rights reserved.</p>
+          <p>© 2026 K-Shop Campus Marketplace. All rights reserved.</p>
           <div className="flex items-center gap-3.5 text-xs text-stone-500 flex-wrap">
             <Link to="/privacy-policy" className="hover:text-burgundy">Privacy</Link>
             <span>•</span>

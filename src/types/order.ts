@@ -37,6 +37,7 @@ export interface Order {
   deliveryFee: number;
   discount: number;
   totalAmount: number;
+  receivedAmount?: number;
   paymentMethod: 'CASH_ON_DELIVERY';
   paymentStatus: 'UNPAID_COD' | 'COLLECTED_COD' | 'VOID_CANCELLED';
   orderStatus: CODOrderStatus;
