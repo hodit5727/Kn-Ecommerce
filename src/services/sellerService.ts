@@ -12,7 +12,7 @@
  *   seller's inventory/settlement records return 403 (role violation) or
  *   404 (resource not owned by this seller).
  * - Settlement/payout data is server-owned: sellers may REQUEST a payout,
- *   but amounts, fees, statuses, and bank references are computed and
+ *   but amounts, fees, and statuses are computed and
  *   mutated only by the server. Sellers cannot modify settlement records.
  *
  * ─── API contract for the Express backend (backend phase) ──────────────────

@@ -293,7 +293,7 @@ export const AdminDashboardPage: React.FC = () => {
             {metrics.pendingSettlementsCount} batches
           </p>
           <Link to="/admin/settlements" className="text-[11px] text-burgundy hover:underline">
-            Authorize bank wires →
+            Authorize cash payouts →
           </Link>
         </div>
 
@@ -385,7 +385,7 @@ export const AdminDashboardPage: React.FC = () => {
               <span>5% Commission Audited</span>
             </div>
             <p className="text-stone-500 text-[11px]">
-              Strict mathematical reconciliation: Gross COD collection, 5% admin retained fee, and 95% net seller wire settlement.
+              Strict mathematical reconciliation: Gross COD collection, 5% admin retained fee, and 95% net seller cash settlement.
             </p>
           </div>
 

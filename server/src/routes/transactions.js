@@ -17,6 +17,18 @@ import { Router } from 'express';
 import { httpError, ok } from '../lib/errors.js';
 import { requireAuth } from '../middleware/auth.js';
 import { isApprovedSeller as isSeller } from '../middleware/seller.js';
+import { resolveImageUrl } from '../lib/productShape.js';
+
+function formatProductCode(sku, productId) {
+  const itemMatch = String(sku || '').match(/\d{4}$/);
+  if (itemMatch) return `KNPR-${itemMatch[0]}`;
+  const itemHex = String(productId || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
+  if (itemHex) {
+    const digits = String((parseInt(itemHex, 16) % 9000) + 1000);
+    return `KNPR-${digits}`;
+  }
+  return 'KNPR-1001';
+}
 
 /** ledger_type + entry → frontend TransactionCategory (server-owned mapping). */
 function categoryFor(txn) {
@@ -26,6 +38,19 @@ function categoryFor(txn) {
   if (base === 'REFUND' && txn.entry === 'DEBIT') return 'REFUND_DEDUCTION';
   if (base === 'PAYOUT' && txn.entry === 'DEBIT') return 'SETTLEMENT_PAYOUT';
   return 'CORRECTION_ADJUSTMENT'; // ADJUSTMENT or any unexpected combination
+}
+
+/** Standard FinTech accounting category */
+function fintechCategoryFor(txn) {
+  const base = String(txn.txn_type ?? '');
+  if (base === 'COD_RECEIPT' && txn.entry === 'CREDIT') return 'COD_COLLECTION';
+  if (base === 'COMMISSION' && txn.entry === 'CREDIT') return 'PLATFORM_COMMISSION';
+  if (base === 'REFUND' && txn.entry === 'DEBIT') return 'CUSTOMER_REFUND';
+  if (base === 'REFUND' && txn.entry === 'CREDIT') return 'REFUND_REVERSAL';
+  if (base === 'PAYOUT' && txn.entry === 'DEBIT') return 'SELLER_PAYOUT';
+  if (base === 'PAYOUT' && txn.entry === 'CREDIT') return 'SELLER_PAYOUT_REVERSAL';
+  if (base === 'ADJUSTMENT') return 'ADJUSTMENT';
+  return 'ADJUSTMENT';
 }
 
 function descriptionFor(txn, orderNumber, isSellerViewer, productInfo) {
@@ -41,7 +66,7 @@ function descriptionFor(txn, orderNumber, isSellerViewer, productInfo) {
       case 'REFUND':
         return `Customer refund deduction${itemSuffix}`;
       case 'PAYOUT':
-        return 'Settlement payout disbursed to registered bank';
+        return 'Cash settlement payout handed directly to seller';
       default:
         return String(txn.metadata?.note ?? 'Escrow balance adjustment').slice(0, 300);
     }
@@ -56,7 +81,7 @@ function descriptionFor(txn, orderNumber, isSellerViewer, productInfo) {
     case 'REFUND':
       return `Customer refund payout${orderRef}`;
     case 'PAYOUT':
-      return `Settlement payout released to seller${orderRef}`;
+      return `Cash settlement payout handed to seller${orderRef}`;
     default:
       return String(txn.metadata?.note ?? 'Treasury balance adjustment').slice(0, 300);
   }
@@ -139,6 +164,17 @@ export function createTransactionsRouter({ env, supabase }) {
       // eslint-disable-next-line no-console
       console.warn('[transactions] payouts join notice:', payoutError.message);
     }
+    const imageBase = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
+    const distinctProductIds = [...new Set((itemRows ?? []).map((it) => it.product_id).filter(Boolean))];
+    const { data: rawImages = [] } = distinctProductIds.length
+      ? await supabase.service.from('product_images').select('product_id, storage_bucket, storage_path, position, is_primary').in('product_id', distinctProductIds)
+      : { data: [] };
+    const imagesByProduct = new Map();
+    for (const img of rawImages ?? []) {
+      if (!imagesByProduct.has(img.product_id)) imagesByProduct.set(img.product_id, []);
+      imagesByProduct.get(img.product_id).push(img);
+    }
+
     const orderById = new Map(orderRows.map((o) => [o.id, o]));
     const profileById = new Map(profileRows.map((p) => [p.id, p]));
     const payoutByOrderId = new Map(payoutRows.map((p) => [p.order_id, p]));
@@ -165,6 +201,16 @@ export function createTransactionsRouter({ env, supabase }) {
       const productId = firstItem?.product_id || undefined;
       const productName = firstItem?.product_name || (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
       const productSku = firstItem?.sku || undefined;
+      const productCode = (productId || productSku) ? formatProductCode(productSku, productId) : undefined;
+
+      const prodImgs = productId ? (imagesByProduct.get(productId) || []) : [];
+      const sortedImgs = prodImgs.slice().sort((a, b) => {
+        const primary = Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary));
+        if (primary !== 0) return primary;
+        return (a.position ?? 0) - (b.position ?? 0);
+      });
+      const productImage = sortedImgs[0] ? resolveImageUrl(sortedImgs[0], imageBase) : undefined;
+
       const productReference = productName
         ? `${productName}${productSku ? ` (${productSku})` : ''}`
         : (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
@@ -177,8 +223,9 @@ export function createTransactionsRouter({ env, supabase }) {
         : Math.round(grossAmount * 0.05 * 100) / 100;
       const netAmount = Math.max(0, Math.round((grossAmount - commissionAmount) * 100) / 100);
 
-      const payoutReference = t.metadata?.bankReference || (payout?.id ? `WIRE-KN-${payout.id.slice(0, 8).toUpperCase()}` : (t.txn_type === 'PAYOUT' ? 'WIRE-SETTLEMENT' : undefined));
-      const paymentMethod = t.txn_type === 'PAYOUT' ? 'Bank Wire (NEFT/RTGS)' : (order?.payment_method || 'Cash on Delivery (COD)');
+      const sellerPayoutId = t.metadata?.seller_payout_id || (payout?.id ? `PAY-${payout.id.slice(0, 8).toUpperCase()}` : (t.txn_type === 'PAYOUT' ? `PAY-${t.id.slice(0, 8).toUpperCase()}` : undefined));
+      const payoutReference = sellerPayoutId || undefined;
+      const paymentMethod = t.txn_type === 'PAYOUT' ? 'Direct Cash Handover' : (order?.payment_method || 'Cash on Delivery (COD)');
 
       let displayAmount = Number(t.amount) || 0;
       let balanceAfter = Number(t.balance_after) || 0;
@@ -213,6 +260,15 @@ export function createTransactionsRouter({ env, supabase }) {
         }
       }
 
+      const payoutStatus = payout?.status === 'RELEASED'
+        ? 'PAID'
+        : (payout?.status === 'CANCELLED'
+          ? 'CANCELLED'
+          : (payout?.status === 'SCHEDULED'
+            ? 'PENDING'
+            : (t.txn_type === 'PAYOUT' ? 'PAID' : undefined)));
+      const payoutDate = payout?.released_at || (t.txn_type === 'PAYOUT' ? String(t.created_at ?? '') : undefined);
+
       return {
         id: t.id,
         transactionNumber: t.txn_ref ?? '',
@@ -224,17 +280,27 @@ export function createTransactionsRouter({ env, supabase }) {
         orderId: t.order_id ?? undefined,
         orderNumber: (t.order_id && orderNumber) || undefined,
         productId,
+        productCode,
         productName,
         productSku,
+        productImage,
         productReference,
         grossAmount,
         commissionRate,
         commissionAmount,
         netAmount,
+        sellerPayoutId,
         payoutReference,
+        // Privacy rule: Sellers & customers must NEVER see cash collection references or internal reconciliation details
+        cashCollectionReference: profile.role === 'ADMIN' ? (t.metadata?.collection_reference || undefined) : undefined,
+        isReconciled: profile.role === 'ADMIN' ? Boolean(t.metadata?.is_reconciled) : undefined,
+        reconciliationReference: profile.role === 'ADMIN' ? (t.metadata?.reconciliation_reference || undefined) : undefined,
+        payoutStatus,
+        payoutDate,
         paymentMethod,
         type: t.entry === 'CREDIT' ? 'CR' : 'DR',
         category: categoryFor(t),
+        transactionCategory: fintechCategoryFor(t),
         description: descriptionFor(t, orderNumber, isSellerViewer, productName),
         amount: displayAmount,
         balanceAfter,
@@ -247,7 +313,61 @@ export function createTransactionsRouter({ env, supabase }) {
       String(b.createdAt).localeCompare(String(a.createdAt))
     );
 
-    return ok(res, { transactions });
+    // Compute independent, verified summary metrics
+    let summary = {};
+    if (profile.role === 'ADMIN') {
+      const allCodCollected = all
+        .filter((t) => t.txn_type === 'COD_RECEIPT' && t.entry === 'CREDIT')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const allPayoutsPaid = all
+        .filter((t) => t.txn_type === 'PAYOUT' && t.entry === 'DEBIT')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const allPendingPayouts = (payoutRows ?? [])
+        .filter((p) => p.status === 'SCHEDULED')
+        .reduce((sum, p) => sum + Math.max(0, (Number(p.amount) || 0) - (Number(p.commission_amount) || 0)), 0);
+      const totalRetainedCommission = Math.round(allCodCollected * 0.05 * 100) / 100;
+      const cashAwaitingReconciliation = all
+        .filter((t) => t.txn_type === 'COD_RECEIPT' && !t.metadata?.is_reconciled)
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const totalRefunds = all
+        .filter((t) => t.txn_type === 'REFUND' && t.entry === 'DEBIT')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const reconciledCash = Math.max(0, Math.round((allCodCollected - cashAwaitingReconciliation) * 100) / 100);
+      const treasuryBalance = Math.max(0, Math.round((reconciledCash - allPayoutsPaid - totalRefunds) * 100) / 100);
+
+      summary = {
+        totalCodCollected: allCodCollected,
+        sellerPayoutsPaid: allPayoutsPaid,
+        pendingSellerPayouts: allPendingPayouts,
+        retainedCommission: totalRetainedCommission,
+        cashAwaitingReconciliation,
+        reconciledCash,
+        treasuryBalance,
+      };
+    } else if (isSellerViewer) {
+      const sellerCodTxns = scoped.filter((t) => t.txn_type === 'COD_RECEIPT');
+      const grossSales = sellerCodTxns.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const platformCommission = Math.round(grossSales * 0.05 * 100) / 100;
+      const netSellerEarnings = Math.max(0, Math.round((grossSales - platformCommission) * 100) / 100);
+      const totalPayoutsPaid = scoped
+        .filter((t) => t.txn_type === 'PAYOUT' && t.entry === 'DEBIT')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const pendingPayouts = (payoutRows ?? [])
+        .filter((p) => p.seller_id === profile.id && p.status === 'SCHEDULED')
+        .reduce((sum, p) => sum + Math.max(0, (Number(p.amount) || 0) - (Number(p.commission_amount) || 0)), 0);
+      const availableSellerBalance = Math.max(0, Math.round((netSellerEarnings - totalPayoutsPaid) * 100) / 100);
+
+      summary = {
+        grossSales,
+        platformCommission,
+        netSellerEarnings,
+        totalPayoutsPaid,
+        pendingPayouts,
+        availableSellerBalance,
+      };
+    }
+
+    return ok(res, { transactions, summary });
   });
 
   return router;

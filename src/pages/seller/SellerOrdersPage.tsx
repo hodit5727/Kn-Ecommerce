@@ -5,6 +5,7 @@ import { ErrorState } from '../../components/common/ErrorState';
 import { formatINR } from '../../lib/currency';
 import { ShoppingBag, FileText } from 'lucide-react';
 import { DeliveryBillModal } from '../../components/order/DeliveryBillModal';
+import { formatDateDDMMYYYY, formatProductCode } from '../../lib/dateFormat';
 
 export const SellerOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -108,12 +109,8 @@ export const SellerOrdersPage: React.FC = () => {
           <div className="md:hidden space-y-3">
             {orders.map((order) => {
               const progress = getAdminProgressDisplay(order.orderStatus);
-              const orderCode = order.orderCode || order.orderNumber;
               const firstItem = order.items[0];
-              const itemMatch = String(firstItem?.product?.sku || '').match(/\d{4}$/);
-              const itemHex = String(firstItem?.product?.id || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
-              const itemDigits = itemMatch ? itemMatch[0] : (itemHex ? String((parseInt(itemHex, 16) % 9000) + 1000) : '1001');
-              const productCode = (firstItem?.product as any)?.productCode || `KNPR-${itemDigits}`;
+              const productCode = (firstItem?.product as any)?.productCode || formatProductCode(firstItem?.product?.sku, firstItem?.product?.id);
 
               return (
                 <div
@@ -123,11 +120,13 @@ export const SellerOrdersPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span className="text-[10px] uppercase font-semibold text-stone-400 block tracking-wider">
-                        Order ID
+                        Date
                       </span>
-                      <p className="font-mono text-sm font-bold text-stone-900">{orderCode}</p>
+                      <p className="font-mono text-sm font-bold text-stone-900">
+                        {formatDateDDMMYYYY(order.createdAt)}
+                      </p>
                       <span className="text-[10px] text-stone-400 font-mono">
-                        {new Date(order.createdAt).toLocaleDateString()} • COD
+                        Cash on Delivery
                       </span>
                     </div>
                     <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -144,12 +143,6 @@ export const SellerOrdersPage: React.FC = () => {
                   </div>
 
                   <div className="bg-cream-50/70 rounded-xl p-3 text-xs space-y-2 border border-cream-200/80">
-                    <div className="flex items-center justify-between">
-                      <span className="text-stone-500">Customer Ref</span>
-                      <span className="font-mono font-bold text-stone-800 bg-white px-2 py-0.5 rounded border border-stone-200 text-[11px]">
-                        {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
-                      </span>
-                    </div>
                     <div>
                       <span className="text-stone-500 block text-[10px]">Product</span>
                       <div className="flex items-center gap-1.5 mt-0.5">
@@ -177,9 +170,13 @@ export const SellerOrdersPage: React.FC = () => {
                       <span className="text-[10px] text-stone-500">Qty: {firstItem?.quantity || 1}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-stone-400 block">Fulfillment</span>
-                      <span className="text-xs font-semibold text-stone-700">Central Hub</span>
-                      <p className="text-[10px] text-stone-400">Admin Managed</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBillOrder(order)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-burgundy hover:underline"
+                      >
+                        <FileText className="w-3 h-3" /> Invoice Slip
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -193,10 +190,8 @@ export const SellerOrdersPage: React.FC = () => {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-stone-50/80 border-b border-cream-200/80 text-stone-500 uppercase tracking-widest font-bold text-[10px]">
-                    <th className="py-4 px-5">Order ID</th>
-                    <th className="py-4 px-4">Date</th>
-                    <th className="py-4 px-4">Customer Ref</th>
-                    <th className="py-4 px-4">Product ID & Name</th>
+                    <th className="py-4 px-5">Date</th>
+                    <th className="py-4 px-5">Product ID & Name</th>
                     <th className="py-4 px-4">Price & Qty</th>
                     <th className="py-4 px-4">Delivery Logistics</th>
                     <th className="py-4 px-5 text-right">Delivery Progress</th>
@@ -205,42 +200,20 @@ export const SellerOrdersPage: React.FC = () => {
                 <tbody className="divide-y divide-cream-100">
                   {orders.map((order) => {
                     const progress = getAdminProgressDisplay(order.orderStatus);
-                    const orderCode = order.orderCode || order.orderNumber;
                     const firstItem = order.items[0];
-                    const itemMatch = String(firstItem?.product?.sku || '').match(/\d{4}$/);
-                    const itemHex = String(firstItem?.product?.id || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
-                    const itemDigits = itemMatch ? itemMatch[0] : (itemHex ? String((parseInt(itemHex, 16) % 9000) + 1000) : '1001');
-                    const productCode = (firstItem?.product as any)?.productCode || `KNPR-${itemDigits}`;
+                    const productCode = (firstItem?.product as any)?.productCode || formatProductCode(firstItem?.product?.sku, firstItem?.product?.id);
 
                     return (
                       <tr key={order.id} className="hover:bg-cream-50/50 transition-colors">
-                        {/* Order ID */}
-                        <td className="py-4 px-5">
-                          <span className="font-mono font-bold text-stone-900 block text-xs">
-                            {orderCode}
-                          </span>
-                          <span className="text-[10px] text-stone-400 font-mono">
-                            COD Payment
-                          </span>
-                        </td>
-
-                        {/* Date */}
-                        <td className="py-4 px-4 text-stone-500 text-[11px] whitespace-nowrap">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </td>
-
-                        {/* Customer Ref (Privacy-protected: no raw name/phone) */}
-                        <td className="py-4 px-4">
-                          <span className="inline-block px-2 py-0.5 rounded bg-stone-100 text-stone-800 font-mono text-[11px] font-bold">
-                            {order.customerBusinessId || `KNCR-${order.id.slice(0, 4).toUpperCase()}`}
-                          </span>
-                          <p className="text-[10px] text-stone-400 mt-1">Campus Patron</p>
+                        {/* Date (DD/MM/YYYY) */}
+                        <td className="py-4 px-5 text-stone-800 font-mono font-medium text-xs whitespace-nowrap">
+                          {formatDateDDMMYYYY(order.createdAt)}
                         </td>
 
                         {/* Product ID & Name */}
-                        <td className="py-4 px-4">
+                        <td className="py-4 px-5">
                           <div className="flex items-center gap-2">
-                            <span className="px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy font-mono text-[10px] font-bold shrink-0">
+                            <span className="px-2 py-0.5 rounded bg-burgundy/10 text-burgundy font-mono text-xs font-bold shrink-0">
                               {productCode}
                             </span>
                             <span className="font-medium text-stone-900 line-clamp-1 text-xs">

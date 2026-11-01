@@ -1149,7 +1149,6 @@ export function createAdminManagementRouter({ env, supabase }) {
                 : releasable
                   ? 'PENDING'
                   : 'PROCESSING',
-          bankReference: p.status === 'RELEASED' ? `WIRE-KN-${String(p.id).slice(0, 6).toUpperCase()}` : undefined,
           createdAt: p.created_at ? String(p.created_at) : '',
           processedAt: p.released_at ? String(p.released_at) : undefined,
         };
@@ -1159,7 +1158,7 @@ export function createAdminManagementRouter({ env, supabase }) {
     return ok(res, { settlements });
   });
 
-  // ── POST /admin/settlements/:id/release — Admin wires payout to seller ────
+  // ── POST /admin/settlements/:id/release — Admin hands cash payout to seller ────
   router.post('/admin/settlements/:id/release', ...adminGate, async (req, res) => {
     const id = String(req.params.id ?? '').trim();
     const { data: allPayouts } = await supabase.service.from('payouts').select('*');
@@ -1182,10 +1181,7 @@ export function createAdminManagementRouter({ env, supabase }) {
       ? Number(found.commission_amount)
       : Math.round(grossAmount * 0.05 * 100) / 100;
     const netAmount = Math.max(0, Math.round((grossAmount - commAmount) * 100) / 100);
-    const bankRef =
-      typeof req.body?.bankReference === 'string' && req.body.bankReference.trim()
-        ? req.body.bankReference.trim()
-        : `WIRE-KN-${Date.now().toString().slice(-6)}`;
+    const sellerPayoutId = `PAY-${found.id.slice(0, 8).toUpperCase()}`;
 
     // 1. Update payout status to RELEASED
     const { error: updateError } = await supabase.service
@@ -1204,7 +1200,7 @@ export function createAdminManagementRouter({ env, supabase }) {
       throw httpError(502, 'Unable to release settlement payout.');
     }
 
-    // 2. Double-entry ledger: PAYOUT debit (95%) + Platform commission record (5%)
+    // 2. Double-entry ledger: Direct Cash Handover PAYOUT debit (95%) + Platform commission record (5%)
     try {
       const { data: allTxns } = await supabase.service.from('transactions').select('entry, amount, txn_type');
       const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
@@ -1217,7 +1213,7 @@ export function createAdminManagementRouter({ env, supabase }) {
       const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
       const txnRef = `TXN-${cryptoTxnDigits}`;
 
-      // (a) Payout wire debit to seller
+      // (a) Payout cash debit to seller
       await supabase.service.from('transactions').insert({
         id: crypto.randomUUID(),
         txn_ref: txnRef,
@@ -1233,8 +1229,9 @@ export function createAdminManagementRouter({ env, supabase }) {
         status: 'POSTED',
         actor_id: req.auth.profile.id,
         metadata: {
-          note: `Settlement wire paid to seller`,
-          bankReference: bankRef,
+          note: `Cash settlement payout handed directly to seller`,
+          seller_payout_id: sellerPayoutId,
+          payment_method: 'Direct Cash Handover',
         },
         created_at: now,
       });
@@ -1256,8 +1253,8 @@ export function createAdminManagementRouter({ env, supabase }) {
           status: 'POSTED',
           actor_id: req.auth.profile.id,
           metadata: {
-            note: `Platform fee (5%) retained from settlement`,
-            bankReference: bankRef,
+            note: `Platform fee (5%) retained from COD cash settlement`,
+            seller_payout_id: sellerPayoutId,
           },
           created_at: now,
         });
@@ -1266,8 +1263,8 @@ export function createAdminManagementRouter({ env, supabase }) {
       // (c) Mandatory notification announcement to the seller
       await supabase.service.from('announcements').insert({
         id: crypto.randomUUID(),
-        title: `Settlement Wire Released: ₹${netAmount}`,
-        message: `Your settlement payout of ₹${netAmount} (after 5% platform fee of ₹${commAmount}) has been wired to your bank. Bank reference: ${bankRef}.`,
+        title: `Cash Settlement Settled: ₹${netAmount}`,
+        message: `Your cash settlement payout of ₹${netAmount} (after 5% platform fee of ₹${commAmount}) has been settled in cash directly by hand.`,
         type: 'SUCCESS',
         audience: 'SELLER',
         is_active: true,
@@ -1299,7 +1296,7 @@ export function createAdminManagementRouter({ env, supabase }) {
             settlementAmount: grossAmount,
             commissionAmount: commAmount,
             netPayout: netAmount,
-            bankReference: bankRef,
+            payoutId: `PAY-${found.id.slice(0, 8).toUpperCase()}`,
           });
         }
       } catch (mailErr) {
@@ -1314,10 +1311,111 @@ export function createAdminManagementRouter({ env, supabase }) {
       resourceType: 'payout',
       resourceId: found.id,
       ip: req.ip ?? null,
-      metadata: { netAmount, bankRef, sellerId: found.seller_id },
+      metadata: { netAmount, sellerId: found.seller_id, payoutType: 'CASH_HANDOVER' },
     });
 
-    return ok(res, { success: true, status: 'RELEASED', releasedAt: now, bankReference: bankRef });
+    return ok(res, {
+      success: true,
+      status: 'RELEASED',
+      payoutId: found.id,
+      sellerPayoutId,
+      releasedAt: now,
+      grossAmount,
+      commissionAmount: commAmount,
+      netAmount,
+    });
+  });
+
+  // ── POST /admin/reconcile-cash — Reconcile COD cash collections into treasury ────
+  router.post('/admin/reconcile-cash', ...adminGate, async (req, res) => {
+    const { transactionId, orderId, allPending } = req.body || {};
+
+    const { data: allTxns, error: txnErr } = await supabase.service
+      .from('transactions')
+      .select('*')
+      .eq('txn_type', 'COD_RECEIPT');
+
+    if (txnErr) {
+      // eslint-disable-next-line no-console
+      console.error('[admin/reconcile-cash] fetch error:', txnErr.message);
+      throw httpError(502, 'Unable to query cash receipt transactions.');
+    }
+
+    // Find unreconciled cash transactions
+    let toReconcile = (allTxns ?? []).filter((t) => {
+      const isRec = t.metadata?.is_reconciled === true;
+      return !isRec;
+    });
+
+    if (transactionId) {
+      toReconcile = toReconcile.filter(
+        (t) => t.id === transactionId || t.txn_ref === transactionId || (t.id && t.id.includes(transactionId))
+      );
+    } else if (orderId) {
+      toReconcile = toReconcile.filter((t) => t.order_id === orderId);
+    } else if (!allPending) {
+      throw httpError(400, 'Specify transactionId, orderId, or allPending: true to reconcile cash.');
+    }
+
+    if (toReconcile.length === 0) {
+      return ok(res, {
+        success: true,
+        reconciledCount: 0,
+        totalReconciledAmount: 0,
+        message: 'No pending unreconciled cash transactions found.',
+      });
+    }
+
+    const now = new Date().toISOString();
+    const ymd = now.slice(0, 10).replace(/-/g, '');
+    let totalReconciledAmount = 0;
+    const reconciledIds = [];
+
+    for (const tx of toReconcile) {
+      const recRef = `REC-${ymd}-${String(crypto.randomInt(100000, 1000000))}`;
+      const updatedMeta = {
+        ...(tx.metadata || {}),
+        is_reconciled: true,
+        reconciled_at: now,
+        reconciled_by: req.auth.profile.id,
+        reconciliation_reference: recRef,
+      };
+
+      const { error: updErr } = await supabase.service
+        .from('transactions')
+        .update({
+          metadata: updatedMeta,
+          status: 'POSTED',
+        })
+        .eq('id', tx.id);
+
+      if (!updErr) {
+        totalReconciledAmount += Number(tx.amount) || 0;
+        reconciledIds.push(tx.id);
+      }
+    }
+
+    totalReconciledAmount = Math.round(totalReconciledAmount * 100) / 100;
+
+    await writeAudit(supabase, {
+      actorId: req.auth.profile.id,
+      actorRole: 'ADMIN',
+      action: 'admin.cash_reconciliation',
+      resourceType: 'treasury',
+      resourceId: reconciledIds[0] || 'batch',
+      ip: req.ip ?? null,
+      metadata: {
+        reconciledCount: reconciledIds.length,
+        totalReconciledAmount,
+        reconciledIds,
+      },
+    });
+
+    return ok(res, {
+      success: true,
+      reconciledCount: reconciledIds.length,
+      totalReconciledAmount,
+    });
   });
 
   // ── GET /admin/trending ────────────────────────────────────────────────

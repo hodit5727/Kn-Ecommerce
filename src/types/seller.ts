@@ -37,7 +37,6 @@ export interface SettlementRecord {
   platformFee: number;
   netSettlementAmount: number;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  bankReference?: string;
   createdAt: string;
   processedAt?: string;
 }

@@ -173,7 +173,7 @@ export const AdminRefundsPage: React.FC = () => {
                       }
                       leftIcon={<CheckCircle2 className="w-4 h-4" />}
                     >
-                      Approve Return & Wire
+                      Approve Return & Cash Refund
                     </Button>
                     <Button
                       variant="destructive"

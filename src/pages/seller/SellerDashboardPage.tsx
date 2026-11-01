@@ -139,7 +139,7 @@ export const SellerDashboardPage: React.FC = () => {
         {/* Pending Settlement */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-cream-200 shadow-soft space-y-1.5 sm:space-y-2">
           <div className="flex items-center justify-between text-stone-500 text-[11px] sm:text-xs font-medium">
-            <span className="truncate">Pending Wire</span>
+            <span className="truncate">Pending Cash Payout</span>
             <div className="p-1.5 sm:p-2 rounded-xl bg-amber-50 text-amber-600 shrink-0">
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
@@ -147,7 +147,7 @@ export const SellerDashboardPage: React.FC = () => {
           <p className="text-lg sm:text-2xl font-serif font-bold text-amber-700 truncate">
             {formatINR(metrics.pendingSettlement)}
           </p>
-          <p className="text-[10px] sm:text-[11px] text-stone-400 truncate">Scheduled for wire</p>
+          <p className="text-[10px] sm:text-[11px] text-stone-400 truncate">Pending in-hand handover</p>
         </div>
 
         {/* Available Settlement */}

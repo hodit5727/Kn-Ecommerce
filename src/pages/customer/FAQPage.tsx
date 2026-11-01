@@ -33,12 +33,12 @@ const FAQS: FAQItem[] = [
   {
     category: 'returns',
     q: 'What is the return and refund policy on K-Shop?',
-    a: 'Every purchase is covered by a mandatory 7-Day Return Policy. If an item arrives damaged, differs from the listed specifications, or does not meet your expectations, submit a claim through the Refunds & Claims portal within 7 days of delivery for administrative resolution and full cash/bank refund.',
+    a: 'Every purchase is covered by a mandatory 7-Day Return Policy. If an item arrives damaged, differs from the listed specifications, or does not meet your expectations, submit a claim through the Refunds & Claims portal within 7 days of delivery for administrative resolution and full cash refund.',
   },
   {
     category: 'returns',
     q: 'How long does refund processing take once approved?',
-    a: 'Once your return is inspected and approved by the K-Shop administration, refunds are disbursed within 24 to 48 banking hours. Cash on delivery orders are refunded via direct wire transfer or cash handover at the campus governance office.',
+    a: 'Once your return is inspected and approved by the K-Shop administration, refunds are disbursed promptly. Cash on delivery orders are refunded via direct cash handover at the campus governance office.',
   },
   {
     category: 'seller',
@@ -48,7 +48,7 @@ const FAQS: FAQItem[] = [
   {
     category: 'seller',
     q: 'What commission fee does K-Shop charge sellers?',
-    a: 'K-Shop retains a transparent 5% platform commission on successfully delivered and settled orders. The remaining 95% net payout balance is wired directly to the seller\'s registered bank account after the 7-day return escrow window elapses.',
+    a: 'K-Shop retains a transparent 5% platform commission on successfully delivered and settled orders. The remaining 95% net payout balance is handed directly in cash to the seller after the 7-day return escrow window elapses.',
   },
   {
     category: 'security',

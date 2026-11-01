@@ -42,8 +42,7 @@
  *
  * Server rules: re-verify the ADMIN role on every request, validate ids and
  * decision values server-side, persist decisions atomically, return only
- * safe error messages, and never expose internal errors or sensitive fields
- * (full bank details, tax records beyond what the UI shows) in responses.
+ * safe error messages, and never expose internal errors or sensitive fields in responses.
  */
 import type { AdminMetrics, AdminCustomerRecord, AdminSellerRecord, Paged } from '../types/admin';
 import type { Product } from '../types/product';

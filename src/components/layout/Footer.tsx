@@ -45,7 +45,7 @@ export const Footer: React.FC = () => {
               <div>
                 <p className="font-serif font-semibold text-stone-900 text-sm">Concierge Refund Process</p>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-                  Formal dispute arbitration and wire return protocol managed under strict governance.
+                  Formal dispute arbitration and cash return protocol managed under strict governance.
                 </p>
               </div>
             </div>

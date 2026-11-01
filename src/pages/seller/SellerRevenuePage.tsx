@@ -78,11 +78,11 @@ export const SellerRevenuePage: React.FC = () => {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-cream-200 shadow-soft space-y-1">
-          <span className="text-xs text-stone-500 font-medium">Pending Wire Disbursement</span>
+          <span className="text-xs text-stone-500 font-medium">Pending Cash Settlement</span>
           <p className="text-2xl font-serif font-bold text-amber-600">
             {formatINR(metrics.pendingSettlement)}
           </p>
-          <span className="text-[10px] text-stone-400">Disbursed on 1st & 16th</span>
+          <span className="text-[10px] text-stone-400">Direct in-hand settlement</span>
         </div>
       </div>
 

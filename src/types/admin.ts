@@ -65,6 +65,4 @@ export interface AdminSellerRecord {
   settlementStatus: 'UP_TO_DATE' | 'PENDING_APPROVAL';
   appliedDate: string;
   reviewedDate?: string;
-  taxId?: string;
-  bankAccountLast4?: string;
 }

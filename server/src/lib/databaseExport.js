@@ -177,7 +177,7 @@ export async function generateDatabaseExport(supabaseClient) {
     ['Total Gross Merchandise Value (GMV)', totalGmv, 'Sum of all orders in orders table (₹)'],
     ['Total Collected GMV (Paid / Delivered)', totalPaidGmv, 'Delivered & Confirmed COD orders (₹)'],
     ['Platform Commission Retained (5%)', totalCommissionEarned || Math.round(totalGmv * 0.05), 'Audited 5% platform commission fee from payouts/transactions (₹)'],
-    ['Total Net Seller Payouts Disbursed', totalPayoutDisbursed, 'Total wire settlements released to verified sellers (₹)'],
+    ['Total Net Seller Payouts Disbursed', totalPayoutDisbursed, 'Total cash settlements released to verified sellers (₹)'],
     ['Total Orders Placed', orders.length, 'Real count of orders created in system'],
     ['Active Product Catalog Items', products.length, 'Distinct products in products table'],
     ['Total Inventory Stock Units', totalInventoryStock, 'Sum of stock_quantity across product_variants'],
@@ -385,7 +385,7 @@ export async function generateDatabaseExport(supabaseClient) {
       col_6: commAmount,
       col_7: netAmount,
       col_8: payout?.status || order.status,
-      col_9: payout?.id ? `WIRE-KN-${payout.id.slice(0, 8).toUpperCase()}` : 'PENDING_RELEASE',
+      col_9: payout?.id ? `PAY-${payout.id.slice(0, 8).toUpperCase()}` : 'PENDING_RELEASE',
       col_10: order.created_at ? new Date(order.created_at) : ''
     });
 
@@ -442,7 +442,7 @@ export async function generateDatabaseExport(supabaseClient) {
       platform_commission: commAmount,
       seller_net_payable: netAmount,
       settlement_status: payout?.status || order.status,
-      payout_reference: payout?.id ? `WIRE-KN-${payout.id.slice(0, 8).toUpperCase()}` : 'PENDING_RELEASE',
+      payout_reference: payout?.id ? `PAY-${payout.id.slice(0, 8).toUpperCase()}` : 'PENDING_RELEASE',
       order_date: order.created_at
     };
   });

@@ -180,11 +180,11 @@ test('Accounting Scenario A: Order ₹1,000, 5% fee = ₹50, payout = ₹950, Ad
     const releaseRes = await request(base, `/api/v1/admin/settlements/${payoutId}/release`, {
       method: 'POST',
       headers: adminCookie,
-      body: { bankReference: 'WIRE-KN-950000' },
+      body: {},
     });
     assert.equal(releaseRes.status, 200, JSON.stringify(releaseRes.body));
     assert.equal(releaseRes.body.status, 'RELEASED');
-    assert.equal(releaseRes.body.bankReference, 'WIRE-KN-950000');
+    assert.ok(releaseRes.body.sellerPayoutId, 'Seller payout ID must be present');
 
     // 2. Verify Admin Central Treasury Ledger
     const adminLedger = await request(base, '/api/v1/transactions', {
@@ -267,11 +267,11 @@ test('Accounting Scenario B: Order ₹975, 5% fee = ₹48.75, payout = ₹926.25
     const releaseRes = await request(base, `/api/v1/admin/settlements/${payoutId}/release`, {
       method: 'POST',
       headers: adminCookie,
-      body: { bankReference: 'WIRE-KN-926250' },
+      body: {},
     });
     assert.equal(releaseRes.status, 200);
     assert.equal(releaseRes.body.status, 'RELEASED');
-    assert.equal(releaseRes.body.bankReference, 'WIRE-KN-926250');
+    assert.ok(releaseRes.body.sellerPayoutId, 'Seller payout ID must be present');
 
     const adminLedger = await request(base, '/api/v1/transactions', {
       headers: adminCookie,
@@ -403,7 +403,7 @@ test('Accounting Scenario E: Multiple products - product-wise item references an
     const releaseRes = await request(base, `/api/v1/admin/settlements/${payoutId}/release`, {
       method: 'POST',
       headers: adminCookie,
-      body: { bankReference: 'WIRE-KN-142500' },
+      body: {},
     });
     assert.equal(releaseRes.status, 200);
 

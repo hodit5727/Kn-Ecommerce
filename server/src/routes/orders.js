@@ -80,6 +80,7 @@ function hasPrivilegedOrderAccess(profile) {
   return (
     allRoles.has('ADMIN') ||
     allRoles.has('SUPER_ADMIN') ||
+    allRoles.has('DELIVERY') ||
     allRoles.has('DELIVERY_PERSON')
   );
 }
@@ -315,6 +316,7 @@ export function createOrdersRouter({ env, supabase }) {
     if (nextDb === 'DELIVERED') {
       const orderTotal = Number(order.total) || 0;
       const commission = Math.round(orderTotal * 0.05 * 100) / 100; // 5% platform fee
+      const collectedCod = req.body?.collectedCod === true || req.body?.receivedAmount != null;
 
       // 1. Escrow Mapping: Ensure payout row exists in payouts table mapped to seller
       try {
@@ -342,55 +344,78 @@ export function createOrdersRouter({ env, supabase }) {
         console.error('[orders] escrow payout mapping failed:', payoutErr?.message ?? payoutErr);
       }
 
-      // 2. Financial Passbook: Record COD receipt credit into transactions table
-      try {
-        if (orderTotal > 0) {
-          const { data: existingTxns } = await supabase.service
-            .from('transactions')
-            .select('id')
-            .eq('order_id', order.id)
-            .eq('txn_type', 'COD_RECEIPT');
+      // 2. Financial Passbook: Record COD receipt credit into transactions table ONLY if cash is collected
+      if (collectedCod) {
+        try {
+          const collectedAmt = req.body?.receivedAmount != null && Number(req.body.receivedAmount) > 0
+            ? Math.round(Number(req.body.receivedAmount) * 100) / 100
+            : orderTotal;
 
-          if (!existingTxns || existingTxns.length === 0) {
-            const { data: allTxns } = await supabase.service
+          // Record received_amount on the order record
+          await supabase.service
+            .from('orders')
+            .update({
+              received_amount: collectedAmt,
+              received_at: now,
+              received_by: req.auth.profile.id,
+            })
+            .eq('id', order.id);
+
+          if (collectedAmt > 0) {
+            const { data: existingTxns } = await supabase.service
               .from('transactions')
-              .select('entry, amount, txn_type');
-            const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
-              if (t.txn_type === 'COMMISSION') return bal;
-              const amt = Number(t.amount) || 0;
-              return t.entry === 'CREDIT' ? bal + amt : bal - amt;
-            }, 0);
-            const newBalance = Math.round((currentTreasury + orderTotal) * 100) / 100;
+              .select('id')
+              .eq('order_id', order.id)
+              .eq('txn_type', 'COD_RECEIPT');
 
-            const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
-            const txnRef = `TXN-${cryptoTxnDigits}`;
+            if (!existingTxns || existingTxns.length === 0) {
+              const { data: allTxns } = await supabase.service
+                .from('transactions')
+                .select('entry, amount, txn_type');
+              const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
+                if (t.txn_type === 'COMMISSION') return bal;
+                const amt = Number(t.amount) || 0;
+                return t.entry === 'CREDIT' ? bal + amt : bal - amt;
+              }, 0);
+              const newBalance = Math.round((currentTreasury + collectedAmt) * 100) / 100;
 
-            await supabase.service.from('transactions').insert({
-              id: crypto.randomUUID(),
-              txn_ref: txnRef,
-              order_id: order.id,
-              customer_id: order.customer_id,
-              seller_id: order.seller_id,
-              txn_type: 'COD_RECEIPT',
-              entry: 'CREDIT',
-              amount: orderTotal,
-              commission_amount: 0,
-              refund_amount: 0,
-              payout_amount: 0,
-              balance_after: newBalance,
-              status: 'POSTED',
-              actor_id: req.auth.profile.id,
-              metadata: {
-                note: `COD payment collected for order #${order.order_number}`,
-                delivered_at: now,
-              },
-              created_at: now,
-            });
+              const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
+              const txnRef = `TXN-${cryptoTxnDigits}`;
+              const ymd = now.slice(0, 10).replace(/-/g, '');
+              const collectionRef = `CASH-${ymd}-${String(crypto.randomInt(100000, 1000000))}`;
+
+              await supabase.service.from('transactions').insert({
+                id: crypto.randomUUID(),
+                txn_ref: txnRef,
+                order_id: order.id,
+                customer_id: order.customer_id,
+                seller_id: order.seller_id,
+                txn_type: 'COD_RECEIPT',
+                entry: 'CREDIT',
+                amount: collectedAmt,
+                commission_amount: 0,
+                refund_amount: 0,
+                payout_amount: 0,
+                balance_after: newBalance,
+                status: 'POSTED',
+                actor_id: req.auth.profile.id,
+                metadata: {
+                  note: `COD payment collected for order #${order.order_number}`,
+                  collection_reference: collectionRef,
+                  collected_amount: collectedAmt,
+                  collector_id: req.auth.profile.id,
+                  collector_role: req.auth.profile.role,
+                  is_reconciled: false,
+                  delivered_at: now,
+                },
+                created_at: now,
+              });
+            }
           }
+        } catch (txnErr) {
+          // eslint-disable-next-line no-console
+          console.error('[orders] ledger transaction recording failed:', txnErr?.message ?? txnErr);
         }
-      } catch (txnErr) {
-        // eslint-disable-next-line no-console
-        console.error('[orders] ledger transaction recording failed:', txnErr?.message ?? txnErr);
       }
 
       // 3. Delivery Confirmation & Escrow Revenue Emails (asynchronous background dispatch to prevent HTTP latency)
@@ -519,6 +544,174 @@ export function createOrdersRouter({ env, supabase }) {
     const updated = updatedRow || { ...order, ...patch };
     const shaped = (await shapeOrders(supabase, [updated], imageBase))[0];
     return ok(res, { order: shaped });
+  });
+
+  // ── POST /orders/:id/collect-cash (Strict FinTech Cash Collection) ────────
+  router.post('/orders/:id/collect-cash', requireAuth(supabase, env), async (req, res) => {
+    const role = req.auth.profile?.role;
+    const roles = Array.isArray(req.auth.profile?.roles) ? req.auth.profile.roles : [];
+    const isAuthorized = role === 'ADMIN' || role === 'DELIVERY' || role === 'DELIVERY_PERSON' || roles.includes('ADMIN') || roles.includes('DELIVERY') || roles.includes('DELIVERY_PERSON');
+    if (!isAuthorized) {
+      throw httpError(403, 'Only authorized delivery personnel and administrators can record cash collection.');
+    }
+
+    const id = String(req.params.id ?? '').trim();
+    if (!UUID_RE.test(id)) throw httpError(404, 'Order not found.');
+
+    const { data: order, error: orderErr } = await supabase.service
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (orderErr || !order) throw httpError(404, 'Order not found.');
+    if (order.status === 'CANCELLED') {
+      throw httpError(400, 'Cannot collect cash for a cancelled order.');
+    }
+
+    // Idempotency: check if cash has already been recorded
+    if (order.received_amount != null) {
+      throw httpError(400, 'Cash collection has already been recorded for this order.');
+    }
+
+    const { data: existingTxns } = await supabase.service
+      .from('transactions')
+      .select('id, metadata')
+      .eq('order_id', order.id)
+      .eq('txn_type', 'COD_RECEIPT');
+
+    if (existingTxns && existingTxns.length > 0) {
+      throw httpError(400, 'Cash collection has already been recorded for this order.');
+    }
+
+    const orderTotal = Number(order.total) || 0;
+    const collectedAmt = req.body?.amount != null && Number(req.body.amount) > 0
+      ? Math.round(Number(req.body.amount) * 100) / 100
+      : orderTotal;
+
+    if (!Number.isFinite(collectedAmt) || collectedAmt <= 0) {
+      throw httpError(400, 'Collected amount must be greater than zero.');
+    }
+
+    const now = new Date().toISOString();
+    const ymd = now.slice(0, 10).replace(/-/g, '');
+    const collectionRef = `CASH-${ymd}-${String(crypto.randomInt(100000, 1000000))}`;
+
+    // 1. Update order with received_amount, received_at, received_by
+    const { error: updateErr } = await supabase.service
+      .from('orders')
+      .update({
+        received_amount: collectedAmt,
+        received_at: now,
+        received_by: req.auth.profile.id,
+        updated_at: now,
+      })
+      .eq('id', order.id);
+
+    if (updateErr) {
+      // eslint-disable-next-line no-console
+      console.error('[orders/collect-cash] order update failed:', updateErr.message);
+      throw httpError(502, 'Unable to record cash collection.');
+    }
+
+    // 2. Insert verified COD_RECEIPT credit into transactions
+    const { data: allTxns } = await supabase.service
+      .from('transactions')
+      .select('entry, amount, txn_type');
+    const currentTreasury = (allTxns ?? []).reduce((bal, t) => {
+      if (t.txn_type === 'COMMISSION') return bal;
+      const amt = Number(t.amount) || 0;
+      return t.entry === 'CREDIT' ? bal + amt : bal - amt;
+    }, 0);
+    const newBalance = Math.round((currentTreasury + collectedAmt) * 100) / 100;
+
+    const cryptoTxnDigits = String(crypto.randomInt(1000000000, 10000000000));
+    const txnRef = `TXN-${cryptoTxnDigits}`;
+
+    const { error: txnErr } = await supabase.service.from('transactions').insert({
+      id: crypto.randomUUID(),
+      txn_ref: txnRef,
+      order_id: order.id,
+      customer_id: order.customer_id,
+      seller_id: order.seller_id,
+      txn_type: 'COD_RECEIPT',
+      entry: 'CREDIT',
+      amount: collectedAmt,
+      commission_amount: 0,
+      refund_amount: 0,
+      payout_amount: 0,
+      balance_after: newBalance,
+      status: 'POSTED',
+      actor_id: req.auth.profile.id,
+      metadata: {
+        note: `COD payment verified & recorded for order #${order.order_number}`,
+        collection_reference: collectionRef,
+        collected_amount: collectedAmt,
+        collector_id: req.auth.profile.id,
+        collector_role: req.auth.profile.role,
+        is_reconciled: false,
+        verified_at: now,
+      },
+      created_at: now,
+    });
+
+    if (txnErr) {
+      // eslint-disable-next-line no-console
+      console.error('[orders/collect-cash] transaction insert failed:', txnErr.message);
+      throw httpError(502, 'Unable to write ledger entry.');
+    }
+
+    // 3. Ensure Day-8 scheduled seller payout row exists in payouts
+    const commission = Math.round(collectedAmt * 0.05 * 100) / 100;
+    try {
+      if (order.seller_id) {
+        const { data: existingPayouts } = await supabase.service
+          .from('payouts')
+          .select('id')
+          .eq('order_id', order.id);
+        if (!existingPayouts || existingPayouts.length === 0) {
+          await supabase.service.from('payouts').insert({
+            id: crypto.randomUUID(),
+            seller_id: order.seller_id,
+            order_id: order.id,
+            amount: collectedAmt,
+            commission_amount: commission,
+            eligible_at: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
+            status: 'SCHEDULED',
+            created_at: now,
+            updated_at: now,
+          });
+        }
+      }
+    } catch (payoutErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[orders/collect-cash] payout record notice:', payoutErr?.message ?? payoutErr);
+    }
+
+    // 4. Audit Trail
+    await writeAudit(supabase, {
+      actorId: req.auth.profile.id,
+      actorRole: req.auth.profile.role,
+      action: 'order.cash_collected',
+      resourceType: 'order',
+      resourceId: order.id,
+      ip: req.ip ?? null,
+      metadata: {
+        orderNumber: order.order_number,
+        collectedAmount: collectedAmt,
+        collectionReference: collectionRef,
+      },
+    });
+
+    return ok(res, {
+      success: true,
+      orderId: order.id,
+      orderNumber: order.order_number,
+      collectionReference: collectionRef,
+      transactionRef: txnRef,
+      receivedAmount: collectedAmt,
+      isReconciled: false,
+    });
   });
 
   // ── POST /orders (COD order creation — Phase 9 WRITE side) ────────────────

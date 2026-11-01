@@ -22,8 +22,9 @@
 import type { FinancialTransaction } from '../types/transaction';
 import { apiRequest } from '../api/http';
 
-interface TransactionsResponse {
+export interface TransactionsResponse {
   transactions: FinancialTransaction[];
+  summary?: any;
 }
 
 export const transactionService = {
@@ -38,5 +39,42 @@ export const transactionService = {
       method: 'GET',
     });
     return res.transactions;
+  },
+
+  async getTransactionsWithSummary(filter?: {
+    type?: 'CR' | 'DR';
+  }): Promise<{ transactions: FinancialTransaction[]; summary?: any }> {
+    const query = filter?.type ? `?type=${encodeURIComponent(filter.type)}` : '';
+    const res = await apiRequest<TransactionsResponse>(`/transactions${query}`, {
+      method: 'GET',
+    });
+    return { transactions: res.transactions ?? [], summary: res.summary };
+  },
+
+  async reconcileCash(params: {
+    transactionId?: string;
+    orderId?: string;
+    allPending?: boolean;
+  }): Promise<{ success: boolean; reconciledCount: number; totalReconciledAmount?: number }> {
+    return apiRequest<{ success: boolean; reconciledCount: number; totalReconciledAmount?: number }>(
+      '/admin/reconcile-cash',
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+    );
+  },
+
+  async collectCash(
+    orderId: string,
+    amount?: number,
+  ): Promise<{ success: boolean; collectionReference: string; receivedAmount: number }> {
+    return apiRequest<{ success: boolean; collectionReference: string; receivedAmount: number }>(
+      `/orders/${orderId}/collect-cash`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ amount }),
+      },
+    );
   },
 };

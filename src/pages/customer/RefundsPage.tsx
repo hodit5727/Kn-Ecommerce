@@ -68,8 +68,8 @@ export const RefundsPage: React.FC = () => {
         </div>
         <p className="text-stone-600 leading-relaxed max-w-3xl">
           Because K-Shop operates under pure Cash on Delivery, refunds are audited individually by
-          governance curators and the artisan seller. Upon approval, funds are wired directly to your
-          registered IBAN or bank coordinates.
+          governance curators and the artisan seller. Upon approval, funds are handed over directly in cash
+          at the campus governance office.
         </p>
       </div>
 

@@ -50,7 +50,7 @@ export const TermsOfServicePage: React.FC = () => {
             <li>No advance payment or credit card credentials are ever requested or stored on this platform.</li>
             <li>Patrons inspect delivered goods in the presence of the campus delivery personnel before handing over physical currency.</li>
             <li>Cash collection is verified digitally by the delivery personnel before updating the order to <code>DELIVERED</code>.</li>
-            <li>Merchant funds are held in escrow for a 7-day observation period before becoming eligible for wire settlement.</li>
+            <li>Merchant funds are held in escrow for a 7-day observation period before becoming eligible for cash settlement.</li>
           </ul>
         </section>
 
@@ -65,7 +65,7 @@ export const TermsOfServicePage: React.FC = () => {
           <ul className="list-disc pl-5 space-y-2 text-stone-600 text-xs">
             <li>Patrons may submit a formal return claim via the <Link to="/refunds" className="text-burgundy font-semibold underline">Refunds & Claims Portal</Link> within 7 days of delivery.</li>
             <li>Returned items must include original presentation boxes, security tags, certificates of provenance, and accessories.</li>
-            <li>Once approved by administrative arbitration, refund cash or bank settlement is processed within 48 banking hours.</li>
+            <li>Once approved by administrative arbitration, refund cash settlement is processed promptly via campus cash handover.</li>
           </ul>
         </section>
 
@@ -79,7 +79,7 @@ export const TermsOfServicePage: React.FC = () => {
           </p>
           <ul className="list-disc pl-5 space-y-2 text-stone-600 text-xs">
             <li>A standardized <strong>5% platform commission fee</strong> is retained on fulfilled sales to fund campus courier logistics, white-glove inspection, and platform infrastructure.</li>
-            <li>The net 95% balance is wired directly to the seller&apos;s verified bank account upon escrow maturation.</li>
+            <li>The net 95% balance is handed directly in cash to the seller upon escrow maturation.</li>
             <li>Counterfeiting, fake documentation, or unauthorized product alteration results in permanent seller revocation and forfeiture of escrowed balances.</li>
           </ul>
         </section>
