@@ -45,7 +45,19 @@ const CATEGORY_NAV_ITEMS = [
 ];
 
 export const Navbar: React.FC = () => {
-  const { user, activeRole, switchRole, logout, isAuthModalOpen, openAuthModal, closeAuthModal, sessionError, clearSessionError } = useAuth();
+  const {
+    user,
+    activeRole,
+    switchRole,
+    logout,
+    isAuthModalOpen,
+    openAuthModal,
+    closeAuthModal,
+    sessionError,
+    clearSessionError,
+    isLoading,
+    isAuthInitialized,
+  } = useAuth();
   const { showToast } = useToast();
   const { openCartDrawer, itemCount } = useCart();
   const { wishlistCount } = useWishlist();
@@ -365,8 +377,21 @@ export const Navbar: React.FC = () => {
                 )}
               </button>
 
-              {/* User: Login button (Desktop) or compact avatar/icon (Mobile) */}
-              {!user ? (
+              {/* User: Neutral skeleton during verification, or Login button, or authenticated profile */}
+              {!isAuthInitialized || isLoading ? (
+                /* Neutral loading placeholder while session is verifying (prevents 3s Login flicker) */
+                <div className="flex items-center gap-1.5" aria-label="Verifying authentication">
+                  {/* Mobile Compact Skeleton */}
+                  <div className="flex md:hidden w-10 h-10 rounded-xl bg-cream-100/80 animate-pulse border border-cream-200/60 items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-cream-200/80" />
+                  </div>
+                  {/* Desktop Full Skeleton */}
+                  <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cream-100/70 animate-pulse border border-cream-200/60 min-h-[36px]">
+                    <div className="w-6 h-6 rounded-lg bg-cream-200/80 shrink-0" />
+                    <div className="w-14 h-3 rounded bg-cream-200/80" />
+                  </div>
+                </div>
+              ) : !user ? (
                 <>
                   {/* Mobile Compact Login Button */}
                   <button

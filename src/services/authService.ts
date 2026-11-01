@@ -74,6 +74,8 @@ interface SellerDocumentUploadResponse extends SellerDocumentReference {
   signedUrl: string;
 }
 
+let inFlightSessionPromise: Promise<UserProfile | null> | null = null;
+
 export const authService = {
   async sendOtp(email: string): Promise<MessageResponse> {
     return apiRequest<MessageResponse>('/auth/otp/send', {
@@ -177,21 +179,32 @@ export const authService = {
     return res.user;
   },
 
-  /** Server-side session lookup. 401/403 means "not signed in" (returns null);
+  /** Server-side session lookup with in-flight deduplication. 401/403 means "not signed in" (returns null);
    *  any other failure is thrown so the UI can show a real error state. */
-  async getSession(): Promise<UserProfile | null> {
-    try {
-      const res = await apiRequest<SessionResponse>('/auth/session', { method: 'GET' });
-      return res.user;
-    } catch (err) {
-      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-        return null;
-      }
-      throw err;
+  async getSession(force = false): Promise<UserProfile | null> {
+    if (inFlightSessionPromise && !force) {
+      return inFlightSessionPromise;
     }
+
+    inFlightSessionPromise = (async () => {
+      try {
+        const res = await apiRequest<SessionResponse>('/auth/session', { method: 'GET' });
+        return res.user;
+      } catch (err) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          return null;
+        }
+        throw err;
+      } finally {
+        inFlightSessionPromise = null;
+      }
+    })();
+
+    return inFlightSessionPromise;
   },
 
   async logout(): Promise<void> {
+    inFlightSessionPromise = null;
     await apiRequest<MessageResponse>('/auth/logout', { body: JSON.stringify({}) });
   },
 

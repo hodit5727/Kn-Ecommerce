@@ -10,7 +10,7 @@ interface RoleGuardProps {
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-  const { user, isAuthenticated, activeRole, switchRole, isPreviewSession, isLoading, startPreviewSession } = useAuth();
+  const { user, isAuthenticated, activeRole, switchRole, isPreviewSession, isLoading, isAuthInitialized, startPreviewSession } = useAuth();
   const location = useLocation();
 
   const isApprovedSeller = Boolean(
@@ -50,7 +50,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
     return null;
   }
 
-  if (isLoading) {
+  if (isLoading || !isAuthInitialized) {
     // AuthContext boots with user=null and restores the session asynchronously
     // via /auth/session. Redirecting during that window would log the user out
     // on every refresh (§5-17/81: auth state inconsistent after refresh).

@@ -89,14 +89,13 @@ export const Footer: React.FC = () => {
 
           <div>
             <p className="font-serif font-semibold text-xs uppercase tracking-widest text-stone-900 mb-4">
-              Shop Categories
+              Collections
             </p>
             <ul className="space-y-2.5 text-xs text-stone-600">
               <li><Link to="/products?category=Timepieces" className="hover:text-burgundy">Watches</Link></li>
               <li><Link to="/products?category=Fashion" className="hover:text-burgundy">Fashion</Link></li>
               <li><Link to="/products?category=Mobiles" className="hover:text-burgundy">Mobiles</Link></li>
               <li><Link to="/products?category=Electronics" className="hover:text-burgundy">Electronics</Link></li>
-              <li><Link to="/products?category=Beauty" className="hover:text-burgundy">Beauty</Link></li>
               <li><Link to="/products" className="hover:text-burgundy font-semibold text-burgundy">All Products →</Link></li>
             </ul>
           </div>

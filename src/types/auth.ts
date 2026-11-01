@@ -50,6 +50,8 @@ export interface AuthState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAuthInitialized: boolean;
+  authLoading: boolean;
   activeRole: UserRole;
   token?: string;
 }

@@ -23,6 +23,8 @@ interface AuthContextType {
   switchRole: (role: UserRole) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAuthInitialized: boolean;
+  authLoading: boolean;
   sessionError: string | null;
   clearSessionError: () => void;
   refreshSession: () => Promise<void>;
@@ -57,16 +59,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeRole, setActiveRole] = useState<UserRole>('CUSTOMER');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthInitialized, setIsAuthInitialized] = useState<boolean>(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [isPreviewSession, setIsPreviewSession] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const sessionOpSeq = useRef(0);
 
   const refreshSession = useCallback(async () => {
+    const opId = ++sessionOpSeq.current;
     if (IS_UI_PREVIEW) {
       // UI preview mode: the backend is intentionally absent, so there is no
       // session to fetch and no error to report — the preview banner
       // communicates the state instead.
       setIsLoading(false);
+      setIsAuthInitialized(true);
       return;
     }
     setIsLoading(true);
@@ -87,11 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch {}
             try {
               const res = await authService.exchangeToken(accessToken, refreshToken || undefined);
-              if (res.user) {
-                setUser(res.user);
-                setActiveRole(res.user.role);
-                setSessionError(null);
-                setIsLoading(false);
+              if (opId === sessionOpSeq.current) {
+                if (res.user) {
+                  setUser(res.user);
+                  setActiveRole(res.user.role);
+                  setSessionError(null);
+                  setIsLoading(false);
+                  setIsAuthInitialized(true);
+                  return;
+                }
+              } else {
                 return;
               }
             } catch {
@@ -102,16 +113,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const sessionUser = await authService.getSession();
-      setUser(sessionUser);
-      setActiveRole(sessionUser ? sessionUser.role : 'CUSTOMER');
-      setSessionError(null);
+      if (opId === sessionOpSeq.current) {
+        setUser(sessionUser);
+        setActiveRole(sessionUser ? sessionUser.role : 'CUSTOMER');
+        setSessionError(null);
+      }
     } catch (err) {
-      // Backend unreachable / erroring: no local fallback identity is used.
-      setUser(null);
-      setActiveRole('CUSTOMER');
-      setSessionError(messageFrom(err, 'Unable to verify your session.'));
+      if (opId === sessionOpSeq.current) {
+        // Backend unreachable / erroring: no local fallback identity is used.
+        setUser(null);
+        setActiveRole('CUSTOMER');
+        setSessionError(messageFrom(err, 'Unable to verify your session.'));
+      }
     } finally {
-      setIsLoading(false);
+      if (opId === sessionOpSeq.current) {
+        setIsLoading(false);
+        setIsAuthInitialized(true);
+      }
     }
   }, []);
 
@@ -122,8 +140,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle global session expiration (401 from any backend request)
   useEffect(() => {
     const handleSessionExpired = () => {
+      sessionOpSeq.current++;
       setUser(null);
       setActiveRole('CUSTOMER');
+      setIsLoading(false);
+      setIsAuthInitialized(true);
       setSessionError('Session expired. Please sign in again.');
 
       if (typeof window !== 'undefined') {
@@ -284,8 +305,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const startPreviewSession = (profile: UserProfile) => {
     if (IS_UI_PREVIEW) {
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole(profile.role);
+      setIsAuthInitialized(true);
       setIsPreviewSession(true);
       setSessionError(null);
       return;
@@ -334,8 +357,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const profile = await authService.verifyPin(email, pin);
+      sessionOpSeq.current++;
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole(profile.role);
+      setIsAuthInitialized(true);
+      setIsAuthInitialized(true);
       setSessionError(null);
       return profile;
     } catch (err) {
@@ -384,12 +411,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profile.role !== 'ADMIN') {
         throw new Error('Admin access denied.');
       }
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole('ADMIN');
+      setIsAuthInitialized(true);
       setSessionError(null);
     } catch (err) {
+      sessionOpSeq.current++;
       setUser(null);
       setActiveRole('CUSTOMER');
+      setIsAuthInitialized(true);
       setSessionError(messageFrom(err, 'Admin sign-in failed.'));
       throw err;
     } finally {
@@ -416,13 +447,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isDelivery) {
         throw new Error('Delivery operator access denied.');
       }
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole(profile.role === 'ADMIN' ? 'ADMIN' : 'DELIVERY_PERSON');
+      setIsAuthInitialized(true);
       setSessionError(null);
       return profile;
     } catch (err) {
+      sessionOpSeq.current++;
       setUser(null);
       setActiveRole('CUSTOMER');
+      setIsAuthInitialized(true);
       setSessionError(messageFrom(err, 'Delivery operator sign-in failed.'));
       throw err;
     } finally {
@@ -434,8 +469,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const profile = await authService.completeProfile(payload);
+      sessionOpSeq.current++;
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole(profile.role);
+      setIsAuthInitialized(true);
+      setIsAuthInitialized(true);
       setSessionError(null);
       return profile;
     } catch (err) {
@@ -459,8 +498,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const profile = await authService.updateProfile(data);
+      sessionOpSeq.current++;
       setUser(profile);
       setActiveRole(profile.role);
+      setIsAuthInitialized(true);
       setSessionError(null);
       return profile;
     } finally {
@@ -473,8 +514,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await authService.applyForSellerAccount(data);
       if (res.user) {
+        sessionOpSeq.current++;
         setUser(res.user);
         setActiveRole(res.user.role);
+        setIsAuthInitialized(true);
       }
       return res;
     } finally {
@@ -483,11 +526,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    sessionOpSeq.current++;
     // Preview sessions have no server cookie to invalidate — end them locally.
     if (isPreviewSession) {
       setUser(null);
       setActiveRole('CUSTOMER');
       setIsPreviewSession(false);
+      setIsAuthInitialized(true);
       setSessionError(null);
       return;
     }
@@ -497,6 +542,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Signed out on the server AND locally — only now show the signed-out UI.
       setUser(null);
       setActiveRole('CUSTOMER');
+      setIsAuthInitialized(true);
       setSessionError(null);
     } catch (err) {
       // Server sign-out failed: keep the user signed in (the cookie is still
@@ -516,6 +562,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchRole,
         isAuthenticated: !!user,
         isLoading,
+        isAuthInitialized,
+        authLoading: isLoading || !isAuthInitialized,
         sessionError,
         clearSessionError,
         refreshSession,

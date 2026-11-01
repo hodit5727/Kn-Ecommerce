@@ -14,7 +14,7 @@ import {
 
 export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
-  const { user, openAuthModal } = useAuth();
+  const { user, openAuthModal, isAuthInitialized, isLoading } = useAuth();
   const { openCartDrawer, itemCount } = useCart();
   const { wishlistCount } = useWishlist();
 
@@ -93,7 +93,12 @@ export const MobileBottomNav: React.FC = () => {
         </button>
 
         {/* 5. Account / Login */}
-        {user ? (
+        {!isAuthInitialized || isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full min-h-[44px] text-stone-400">
+            <div className="w-5 h-5 rounded-full bg-cream-200/80 animate-pulse" />
+            <span className="text-[10px] font-semibold tracking-tight mt-0.5 text-stone-400">Account</span>
+          </div>
+        ) : user ? (
           <Link
             to="/profile"
             className={`flex flex-col items-center justify-center h-full min-h-[44px] transition-colors ${
