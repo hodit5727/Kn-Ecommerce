@@ -20,7 +20,10 @@ import { isApprovedSeller as isSeller } from '../middleware/seller.js';
 import { resolveImageUrl } from '../lib/productShape.js';
 
 function formatProductCode(sku, productId) {
-  const itemMatch = String(sku || '').match(/\d{4}$/);
+  if (sku && String(sku).startsWith('KNPR-')) {
+    return String(sku).split('-').slice(0, 2).join('-');
+  }
+  const itemMatch = String(sku || '').match(/\d{4}/);
   if (itemMatch) return `KNPR-${itemMatch[0]}`;
   const itemHex = String(productId || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
   if (itemHex) {
@@ -98,10 +101,19 @@ export function createTransactionsRouter({ env, supabase }) {
       throw httpError(400, 'type must be CR or DR.');
     }
 
-    const { data: rows, error } = await supabase.service.from('transactions').select('*');
-    if (error) {
+    let rows = [];
+    try {
+      const { data, error } = await supabase.service.from('transactions').select('*');
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error('[transactions] query failed:', error.message);
+        throw httpError(502, 'Unable to load transactions. Please try again later.');
+      }
+      rows = data ?? [];
+    } catch (err) {
+      if (err instanceof HttpError) throw err;
       // eslint-disable-next-line no-console
-      console.error('[transactions] query failed:', error.message);
+      console.error('[transactions] query exception:', err.message);
       throw httpError(502, 'Unable to load transactions. Please try again later.');
     }
     const all = rows ?? [];
@@ -166,14 +178,27 @@ export function createTransactionsRouter({ env, supabase }) {
     }
     const imageBase = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
     const distinctProductIds = [...new Set((itemRows ?? []).map((it) => it.product_id).filter(Boolean))];
-    const { data: rawImages = [] } = distinctProductIds.length
-      ? await supabase.service.from('product_images').select('product_id, storage_bucket, storage_path, position, is_primary').in('product_id', distinctProductIds)
-      : { data: [] };
+    let rawImages = [];
+    let productRows = [];
+    if (distinctProductIds.length) {
+      try {
+        const [imgRes, prodRes] = await Promise.all([
+          supabase.service.from('product_images').select('product_id, storage_bucket, storage_path, position, is_primary').in('product_id', distinctProductIds),
+          supabase.service.from('products').select('id, name, sku, brand, verification_meta').in('id', distinctProductIds),
+        ]);
+        rawImages = imgRes?.data ?? [];
+        productRows = prodRes?.data ?? [];
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[transactions] products/images join notice:', err.message);
+      }
+    }
     const imagesByProduct = new Map();
     for (const img of rawImages ?? []) {
       if (!imagesByProduct.has(img.product_id)) imagesByProduct.set(img.product_id, []);
       imagesByProduct.get(img.product_id).push(img);
     }
+    const productById = new Map((productRows ?? []).map((p) => [p.id, p]));
 
     const orderById = new Map(orderRows.map((o) => [o.id, o]));
     const profileById = new Map(profileRows.map((p) => [p.id, p]));
@@ -199,8 +224,9 @@ export function createTransactionsRouter({ env, supabase }) {
       });
       const firstItem = matchingItems[0] || null;
       const productId = firstItem?.product_id || undefined;
-      const productName = firstItem?.product_name || (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
-      const productSku = firstItem?.sku || undefined;
+      const prod = productId ? productById.get(productId) : null;
+      const productName = firstItem?.product_name || prod?.name || (t.txn_type === 'PAYOUT' ? 'Settlement Payout' : undefined);
+      const productSku = firstItem?.sku || prod?.sku || undefined;
       const productCode = (productId || productSku) ? formatProductCode(productSku, productId) : undefined;
 
       const prodImgs = productId ? (imagesByProduct.get(productId) || []) : [];
@@ -209,7 +235,12 @@ export function createTransactionsRouter({ env, supabase }) {
         if (primary !== 0) return primary;
         return (a.position ?? 0) - (b.position ?? 0);
       });
-      const productImage = sortedImgs[0] ? resolveImageUrl(sortedImgs[0], imageBase) : undefined;
+      let productImage = sortedImgs[0] ? resolveImageUrl(sortedImgs[0], imageBase) : undefined;
+      if (!productImage && productId && prod) {
+        if (Array.isArray(prod?.verification_meta?.images) && prod.verification_meta.images[0]) {
+          productImage = resolveImageUrl(prod.verification_meta.images[0], imageBase);
+        }
+      }
 
       const productReference = productName
         ? `${productName}${productSku ? ` (${productSku})` : ''}`

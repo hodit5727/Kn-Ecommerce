@@ -18,7 +18,10 @@ export function formatDateDDMMYYYY(dateInput: string | number | Date | null | un
  * consistently from the product SKU or UUID.
  */
 export function formatProductCode(sku?: string, productId?: string): string {
-  const itemMatch = String(sku || '').match(/\d{4}$/);
+  if (sku && String(sku).startsWith('KNPR-')) {
+    return String(sku).split('-').slice(0, 2).join('-');
+  }
+  const itemMatch = String(sku || '').match(/\d{4}/);
   if (itemMatch) return `KNPR-${itemMatch[0]}`;
   const itemHex = String(productId || '').replace(/[^0-9a-f]/gi, '').slice(0, 8);
   if (itemHex) {
