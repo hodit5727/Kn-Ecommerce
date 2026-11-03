@@ -12,20 +12,9 @@ import { SEOHead } from '../../components/seo/SEOHead';
 import { formatProductCode } from '../../lib/dateFormat';
 import { ProductCard } from '../../components/product/ProductCard';
 
-// Lazy-load Three.js components to avoid bundling 116 KiB vendor-three into the critical product path
-const Product3DViewer = lazy(() =>
-  import('../../components/3d/Product3DViewer').then((m) => ({ default: m.Product3DViewer }))
-);
-const InteriorVisualizerModal = lazy(() =>
-  import('../../components/3d/InteriorVisualizerModal').then((m) => ({ default: m.InteriorVisualizerModal }))
-);
-
 import {
   Heart,
   ShoppingBag,
-  Box,
-  Image as ImageIcon,
-  Compass,
   Star,
   Truck,
   RotateCcw,
@@ -40,7 +29,6 @@ import {
   ChevronUp,
   Zap,
   Share2,
-  MapPin,
   Sparkles,
   Maximize2,
   X,
@@ -56,15 +44,11 @@ export const ProductDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeMediaTab, setActiveMediaTab] = useState<'photo' | '3d'>('photo');
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
-  const [isInteriorModalOpen, setIsInteriorModalOpen] = useState<boolean>(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
-  const [pincode, setPincode] = useState<string>('641001');
-  const [isPincodeChecked, setIsPincodeChecked] = useState<boolean>(true);
 
   // Flipkart-style "All details" card state
   const [isAllDetailsOpen, setIsAllDetailsOpen] = useState<boolean>(true);
@@ -442,59 +426,44 @@ export const ProductDetailPage: React.FC = () => {
 
         {/* ── FLIPKART LANDSCAPE 2-COLUMN SHOWCASE (Image 2 Reference) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          {/* Left Column (45% on desktop): Media Stage & Gallery */}
+          {/* Left Column (45% on desktop): Pure Product Gallery */}
           <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-24">
             <div
               className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white border border-[#E8DCCF] shadow-2xs group"
               style={{ aspectRatio: '1 / 1' }}
             >
-              {activeMediaTab === '3d' ? (
-                <Suspense
-                  fallback={
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#FFF9F2]/50 gap-2">
-                      <div className="w-8 h-8 rounded-full border-2 border-[#8F0025] border-t-transparent animate-spin" />
-                      <span className="text-xs text-[#4E453E] font-semibold">Loading 3D Visualizer...</span>
-                    </div>
-                  }
-                >
-                  <Product3DViewer product={product} className="w-full h-full" autoRotate={true} />
-                </Suspense>
-              ) : (
-                <>
-                  <img
-                    src={getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })}
-                    srcSet={`${getOptimizedImageUrl(primaryImage, { width: 400, quality: 80 })} 400w, ${getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })} 800w, ${getOptimizedImageUrl(primaryImage, { width: 1200, quality: 85 })} 1200w`}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 550px"
-                    alt={product.name}
-                    width={600}
-                    height={600}
-                    fetchPriority="high"
-                    decoding="async"
-                    onClick={() => setIsLightboxOpen(true)}
-                    className="absolute inset-0 w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-105"
-                  />
+              <img
+                src={getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })}
+                srcSet={`${getOptimizedImageUrl(primaryImage, { width: 400, quality: 80 })} 400w, ${getOptimizedImageUrl(primaryImage, { width: 800, quality: 80 })} 800w, ${getOptimizedImageUrl(primaryImage, { width: 1200, quality: 85 })} 1200w`}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 550px"
+                alt={product.name}
+                width={600}
+                height={600}
+                fetchPriority="high"
+                decoding="async"
+                onClick={() => setIsLightboxOpen(true)}
+                className="absolute inset-0 w-full h-full object-cover cursor-zoom-in transition-transform duration-300 group-hover:scale-105"
+              />
 
-                  {/* Previous / Next Navigation Arrows */}
-                  {product.images.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={prevImage}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-800 shadow-sm border border-[#E8DCCF] flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-100 z-10"
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={nextImage}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-800 shadow-sm border border-[#E8DCCF] flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-100 z-10"
-                        aria-label="Next image"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
+              {/* Previous / Next Navigation Arrows */}
+              {product.images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-800 shadow-sm border border-[#E8DCCF] flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-100 z-10"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-stone-800 shadow-sm border border-[#E8DCCF] flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 sm:opacity-100 z-10"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </>
               )}
 
@@ -513,7 +482,7 @@ export const ProductDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsLightboxOpen(true)}
-                className="absolute top-3 left-12 bg-white/95 backdrop-blur-xs p-2 rounded-xl text-[#4E453E] hover:text-[#8F0025] hover:bg-white shadow-sm border border-[#E8DCCF] z-10 transition-all flex items-center justify-center active:scale-95 hidden sm:flex"
+                className="absolute top-3 right-3 bg-white/95 backdrop-blur-xs p-2 rounded-xl text-[#4E453E] hover:text-[#8F0025] hover:bg-white shadow-sm border border-[#E8DCCF] z-10 transition-all flex items-center justify-center active:scale-95 hidden sm:flex"
                 aria-label="Zoom in"
                 title="Expand image"
               >
@@ -526,46 +495,10 @@ export const ProductDetailPage: React.FC = () => {
                   {activeImageIndex + 1} / {product.images.length}
                 </div>
               )}
-
-              {/* Media Mode Switcher (2D / 3D) */}
-              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-xs p-1 rounded-xl flex gap-1 shadow-sm border border-[#E8DCCF] z-10">
-                <button
-                  type="button"
-                  onClick={() => setActiveMediaTab('photo')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    activeMediaTab === 'photo'
-                      ? 'bg-[#8F0025] text-white shadow-xs'
-                      : 'text-[#4E453E] hover:bg-[#FFF9F2]'
-                  }`}
-                >
-                  <ImageIcon className="w-3.5 h-3.5" /> Photos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveMediaTab('3d')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    activeMediaTab === '3d'
-                      ? 'bg-[#8F0025] text-white shadow-xs'
-                      : 'text-[#4E453E] hover:bg-[#FFF9F2]'
-                  }`}
-                >
-                  <Box className="w-3.5 h-3.5" /> 3D View
-                </button>
-              </div>
-
-              {/* Spatial Visualizer Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsInteriorModalOpen(true)}
-                className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-lg text-xs font-semibold text-[#171717] hover:bg-white hover:text-[#8F0025] transition-all flex items-center gap-1.5 shadow-sm border border-[#E8DCCF]"
-              >
-                <Compass className="w-3.5 h-3.5 text-[#8F0025]" />
-                <span>Visualize in Space</span>
-              </button>
             </div>
 
             {/* Photo Gallery Thumbnails */}
-            {activeMediaTab === 'photo' && product.images.length > 1 && (
+            {product.images.length > 1 && (
               <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
                 {product.images.map((img, idx) => (
                   <button
@@ -765,52 +698,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* 5. Delivery Location / 2-Day Pincode Checker */}
-            <div className="p-3.5 rounded-xl bg-[#FFF9F2]/70 border border-[#E8DCCF] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#4E453E] uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#8F0025]" /> Campus Delivery Check
-                </span>
-                <span className="text-[10px] text-stone-500">COD Campus Hub</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={pincode}
-                  maxLength={6}
-                  onChange={(e) => {
-                    setPincode(e.target.value.replace(/\D/g, ''));
-                    setIsPincodeChecked(false);
-                  }}
-                  placeholder="Enter 6-digit Pincode"
-                  className="flex-1 px-3 py-1.5 bg-white border border-[#E8DCCF] rounded-lg text-xs font-mono focus:outline-none focus:border-[#8F0025]"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (pincode.length >= 6) {
-                      setIsPincodeChecked(true);
-                      showToast(`Delivery verified for ${pincode}`);
-                    } else {
-                      showToast('Please enter a valid 6-digit pincode', 'error');
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-[#8F0025] text-white text-xs font-bold hover:bg-[#72001e] transition-colors"
-                >
-                  Check
-                </button>
-              </div>
-              {isPincodeChecked && (
-                <p className="text-xs text-stone-700 flex items-center gap-1.5 pt-0.5">
-                  <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    Delivery by <strong>{deliveryInfo.dateString}</strong> (within 2 days) | <strong className="text-emerald-700">Free</strong>
-                  </span>
-                </p>
-              )}
-            </div>
-
-            {/* 6. FLIPKART-STYLE "ALL DETAILS" ACCORDION (Exact Reference from Image 2) */}
+            {/* 5. FLIPKART-STYLE "ALL DETAILS" ACCORDION (Exact Reference from Image 2) */}
             <div className="rounded-xl border border-[#E8DCCF] overflow-hidden bg-white shadow-2xs">
               <button
                 type="button"
@@ -1111,17 +999,6 @@ export const ProductDetailPage: React.FC = () => {
               ))}
             </div>
           </div>
-        )}
-
-        {/* Spatial Visualizer Modal (Lazy-Loaded) */}
-        {isInteriorModalOpen && (
-          <Suspense fallback={null}>
-            <InteriorVisualizerModal
-              isOpen={isInteriorModalOpen}
-              onClose={() => setIsInteriorModalOpen(false)}
-              product={product}
-            />
-          </Suspense>
         )}
 
         {/* Lightbox Zoom Modal */}
