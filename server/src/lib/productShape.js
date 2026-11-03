@@ -178,10 +178,9 @@ export function productToPublic(row, imageBase) {
       price: Number(v.price) || 0,
       stock: Number(v.stock) || 0,
     })),
-    // Honest zeroes — no review system or campaign flags exist in the schema
-    // yet; a rating is never invented (their phases add real values).
-    rating: 0,
-    reviewCount: 0,
+    // Honest rating reflection — read genuine value if recorded in database or verification_meta
+    rating: Number(row.verification_meta?.rating ?? row.rating ?? 0),
+    reviewCount: Number(row.verification_meta?.review_count ?? row.review_count ?? 0),
     isTrending: Boolean(row.verification_meta?.is_trending),
     isFeatured: Boolean(row.verification_meta?.is_featured || row.verification_meta?.is_trending),
     isNewArrival: Boolean(
